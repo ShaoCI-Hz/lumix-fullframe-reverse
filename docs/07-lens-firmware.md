@@ -126,20 +126,76 @@ https://panasonic.jp/support/share2/eww/com/dsc/ff/zip/<型号>V<版本>.zip
 
 ---
 
-## 6. 复现
+## 7. 多镜头差分(已完成)
+
+下载 6 个 L 卡口镜头固件做差分:
+
+| 固件 | 内部型号 | 对应镜头 | 大小 | 熵 | 符号数 |
+|---|---|---|---|---|---|
+| `4001V020.plf` | 4001 | S-R24105 | 497,494 | 6.843 | **431** |
+| `4002V020.plf` | 4002 | S-R70200 | 673,252 | 7.005 | **538** |
+| `4006V020.plf` | 4006 | S-E2470 | 452,161 | 6.840 | **539** |
+| `4003V020.plf` | 4003 | S-X50 | 260,498 | 6.699 | 30 |
+| `400CV020.plf` | 400C | S-S85 | 296,988 | 6.429 | 41 |
+| `400EV020.plf` | 400E | S-S50 | 293,006 | 6.461 | 37 |
+
+**6 个固件全部明文**(熵 < 7.01)。
+
+### 7.1 头部结构(全部一致)
+
+```
++0x00  "LENS-UPDATE-FILE-SOF:"
++0x13  46 3a 00 02        ← 固定魔数(所有镜头相同)
++0x17  07 e9 XX XX        ← 前两字节固定,后两字节随型号变化
++0x1C  01 00 03 00        ← 固定
++0x20  40 XX              ← 内部型号码(4001 = S-R24105 …)
++0x24  02 00 00 00        ← 固定
++0x2C  XX XX XX XX        ← 随型号变化(疑似校验/哈希)
++0x58  "LENS-UPDATE-FILE-EOH:"  ← 头部结束
+```
+
+### 7.2 ★ 共享符号栈(变焦镜头 329 个共有符号)
+
+**变焦镜头(4001 / 4002 / 4006)共享 329 个符号** —— 即 L 卡口通用控制栈;
+定焦镜头符号极少(30–41),说明绝大部分是变焦/对焦/防抖通用逻辑。
+
+| 功能 | 符号(节选) |
+|---|---|
+| **OIS 防抖**(19) | `ChkGyro` `ChkOISAj` `ChkOISTYmode` `GyroDCAjAdjSet` `OISAngleData` `OisDVL` `OISDrv` `ItunOIS_Gain_tbl` |
+| **对焦**(19) | `FocDrv` `FocJmp` `FocPos` `Dist5mm` `TrkDistance` `AFAdjData` `LAFArea` `MtrMode` |
+| **光圈**(12) | `IrsAct` `IrsDrvStep` `IrsPos` `IrsJmp` `IrsSetCrVel2x16` `IrsAv2ApNo` |
+| **变焦**(5) | `ZmPosAD` `ZmHysAD2ZomAD3` `ZmPos256ZmMinPlsZmPosAD2ZmPosTrk` |
+| **电机/驱动**(24) | `Current` `DrvActGr` `DrvVel` `PitDrv1~3` `FMtrPos` |
+| **编码器/位置**(76) | `ChkCnt` `CntPulse` `AllAdjAdrsData` `DiffPls` … |
+| **控制/模式**(49) | `ActSet` `AdjSet` `DrvMode` `MoveMode` `TarMode` |
+| **调试/错误**(16) | `DbgMode` `ErrLSB` `ErrMSB` `LockErr` `StopErr` `LogData1~8` |
+
+> 完整清单:`analysis/lens_symbols_all.txt`(1958 行,各符号偏移 + 329 个变焦共享符号)。
+
+### 7.3 结论
+
+**L 卡口镜头的完整控制协议以明文符号形式暴露**:相机→镜头的下发机制
+(OIS / 光圈 / 对焦 / 变焦 / 马达)、内部型号码体系(4001–400E)、统一的更新容器
+(`LENS-UPDATE-FILE-SOF/EOH`)。这是本项目中对"固件处理逻辑"最直接的白盒样本。
+
+---
+
+## 8. 待办
+
+1. 用 Ghidra/IDA(Thumb)反汇编 `CABRIOLET` 区段,还原镜头控制函数
+2. 抓 L 卡口总线,验证相机下发的明文格式
+3. 探究相机固件更新器是否接受镜头格式的载荷(需相机在线)
+
+---
+
+## 9. 复现
 
 ```bash
 # 下载(需 Referer)
 # https://panasonic.jp/support/share2/eww/com/dsc/ff/zip/S-R24105V020.zip
-python analysis/lens_analyze.py   # 格式与分段
-python analysis/lens_deep.py      # 符号表与代码定位
+python analysis/lens_analyze.py     # 格式与分段
+python analysis/lens_deep.py        # 符号表与代码定位
+python analysis/lens_diff.py        # 多镜头差分
+python analysis/lens_common.py      # 共享符号分类
+python analysis/lens_sym_dump.py    # 生成完整符号库
 ```
-
----
-
-## 7. 待办
-
-1. 用 Ghidra/IDA(Thumb)反汇编 `CABRIOLET` 区段,还原镜头控制函数
-2. 下载多个镜头固件做差分,提取共享通信栈
-3. 抓 L 卡口总线,验证相机下发的明文格式
-4. 探究相机固件更新器是否接受镜头格式的载荷(需相机在线)
