@@ -1,0 +1,223 @@
+# Panasonic LUMIX 全画幅固件研究
+
+**简体中文** | [English](README.en.md)
+
+针对 Panasonic LUMIX 全画幅系列(S5M2X / S5M2 / S9 / S1 / S1H / S5)及其 L 卡口
+镜头的固件格式、完整性保护机制与 USB/PTP 协议的**公开资料逆向研究笔记与工具**。
+
+> ⚠️ **免责声明**
+> 本项目仅用于**互操作性研究与个人学习**。
+> 仓库**不包含任何固件二进制**(版权归 Panasonic 所有),仅提供分析脚本与文档。
+> 所有固件均从官方公开渠道获取,分析针对本人拥有合法使用权的设备进行。
+
+---
+
+## 概览
+
+| 方向 | 结果 |
+|---|---|
+| **固件获取** | 打通官方固件下载路径(直链构造与请求要点) |
+| **UPD 容器格式** | 完整解析 —— 文件头、分区表、校验、签名布局 |
+| **分区表** | 58 个分区,字段语义与连续性全部验证通过 |
+| **加密机制** | 判定为强对称加密(6 机型 + 21 组分析脚本交叉验证) |
+| **数字签名** | ECDSA P-256,位于 `+0x220`,覆盖整个镜像 |
+| **明文目录表** | `loader2` / `loader3` 内嵌明文分区目录(名称/地址/大小/哈希) |
+| **多机型对比** | 6 机型横向对比:平台演进、构建时间戳、机型特有分区 |
+| **USB 协议** | WPD/MTP 接入路径打通,枚举设备能力 |
+| **厂商私有协议** | MTP 厂商扩展通道,枚举出 3 个 Panasonic 私有 opcode |
+| **镜头固件** | 完全明文 + 578 项变量字典 + ARM Cortex-M 代码 |
+| **镜头反汇编** | 6 型号共 2,096 个函数指纹;加载基址确定为 `0x08000000` |
+| **跨厂商 L 卡口** | `.plf` 为 L-Mount Alliance 标准(Sigma / Leica / Samyang 同格式) |
+
+---
+
+## 文档索引
+
+完整笔记见 [`docs/README.md`](docs/README.md),按序阅读:
+
+| # | 文档 | 内容 |
+|---|---|---|
+| 01 | [固件获取](docs/01-firmware-acquisition.md) | 官方来源、直链构造、请求要点 |
+| 02 | [固件结构](docs/02-firmware-structure.md) | UPD 容器格式、分区表字段语义 |
+| 03 | [加密分析](docs/03-crypto-analysis.md) | 加密算法判定、签名机制、已排除的路径 |
+| 04 | [USB 接入](docs/04-protocol-usb.md) | WPD/MTP 接入现状与环境配置 |
+| 05 | [厂商私有协议](docs/05-mtp-vendor-protocol.md) | MTP 厂商扩展通道与 opcode 枚举 |
+| 06 | [多机型对比](docs/06-multi-model-comparison.md) | 6 机型横向对比与平台演进 |
+| 07 | [镜头固件](docs/07-lens-firmware.md) | 明文结构、反汇编方法、跨型号指纹聚类(含勘误) |
+| 09 | [第三方 L 卡口](docs/09-third-party-lens.md) | 跨厂商容器标准、Sigma 向量表 |
+
+---
+
+## 仓库结构
+
+```
+.
+├── README.md              本文件(中文) · README.en.md 为英文版
+├── LICENSE                CC BY-NC 4.0
+├── docs/                  研究笔记(9 篇)
+├── tools/                 可复用工具
+│   ├── fwscan.py             固件侦察:熵分析 / 签名扫描 / 压缩流探测
+│   └── pana_unpack.py        UPD 镜像解包:分区列表与提取
+└── analysis/              研究过程中使用的脚本(可复现,102 个)
+    ├── body/                机身固件:容器、加密、loader、多机型差分
+    ├── lens/                镜头固件:格式、反汇编、指纹聚类、跨厂商对比
+    └── misc/                其他
+```
+
+---
+
+## 快速开始
+
+```bash
+pip install pycryptodome zstandard
+
+# 1) 获取官方固件(方式见 docs/01-firmware-acquisition.md)
+#    放到 firmware/ 目录(已在 .gitignore 中,不会被提交)
+
+# 2) 侦察固件镜像
+python tools/fwscan.py firmware/S5m2XV27.bin --window 65536 --strings
+
+# 3) 解包 UPD 镜像
+python tools/pana_unpack.py firmware/S5m2XV27.bin --list
+python tools/pana_unpack.py firmware/S5m2XV27.bin --extract program --out-dir out/
+
+# 4) 镜头固件:下载第三方 L 卡口样本(官方直链)
+python analysis/lens/download_sigma.py
+```
+
+---
+
+## 主要发现
+
+### 一、机身 UPD 容器格式
+
+```
++0x000  "UPD\0"            magic
++0x004  block size = 512
++0x00C  机型 ID  16 字节("MC8223X" / "MC8223" / "MC801" …)
++0x03C  image_data_size
++0x040  CRC32(d[0x200:])     ← 不覆盖 0x000-0x1FF
++0x200  "panasonic" 标识
++0x220  ECDSA P-256 签名(r‖s,64 字节)
++0x2A0  第二个 UPD 记录(与 +0x000 完全相同,冗余备份)
+
+分区表: @0x2DC,每项 92 字节,共 58 项
+  项内: name(13B) | 地址空间标记(3B) | size | offset | flags
+        | SHA-256(32B,明文) | nonce(12B)
+数据区: 0x200..EOF,分区偏移为相对 0x200 的文件偏移
+```
+
+> **注意**:机型 ID 位于 `+0x00C`,处于 CRC32 覆盖范围之外。
+
+### 二、加密与完整性
+
+```
+完整性 = CRC32(0x200..EOF) + SHA-256(逐分区)
+防篡改 = ECDSA P-256 签名(+0x220),覆盖整个镜像
+机密性 = 强对称加密,每机型·每分区独立密钥
+
+验证记录:
+  · 6 机型 × 21 组分析脚本:所有数据分区均密文(含 loader / zimage / rootfs)
+  · 明文仅存在于元数据层(分区表 / loader2 目录表 / UPD 头 / 签名)
+  · 密钥未发现简单派生关系 —— 穷举 17,496 种组合无匹配
+  · 同 nonce、同 size、同明文的明文,跨机型密文 100% 不同
+```
+
+**因此:该固件格式在只读分析下不暴露明文数据。**
+
+详见 [`docs/03-crypto-analysis.md`](docs/03-crypto-analysis.md)。
+
+### 三、USB / PTP 协议层
+
+通过 `WPD_CATEGORY_MTP_EXT_VENDOR_OPERATIONS` 枚举到 3 个厂商私有 opcode:
+
+```
+0x9102   0x9103   0x9104
+```
+
+`0x9102` 可成功执行并建立传输上下文。详见
+[`docs/05-mtp-vendor-protocol.md`](docs/05-mtp-vendor-protocol.md)。
+
+### 四、镜头固件(`.plf`)
+
+与机身固件不同,**镜头固件为明文**(整体熵 6.4–7.0,非加密),可直接分析:
+
+```
+容器:  "LENS-UPDATE-FILE-SOF:" + 头字段 + "LENS-UPDATE-FILE-EOH:" + 段描述表
+       (EOH = End Of **Header**;块大小 512 / 256)
+代码:  完整 ARM Cortex-M Thumb
+       6 型号 → 2,096 个唯一函数指纹,加载基址 0x08000000
+变量表:578 项(名字 + 类型/索引)—— 无地址字段,纯调试元数据
+```
+
+**跨型号指纹匹配**(地址无关:抹去立即数后取 SHA-1):
+
+```
+6 型号共 2,096 个唯一指纹
+  全 6 型号共享 :   17   ← 编译器运行时库(如 __aeabi_fdiv)
+  4 型号共享    :  207
+  仅 1 型号     : 1,540  ← 型号特定
+  变焦组全有    :  245
+  仅变焦组有    :   20   ← 候选业务逻辑(命令处理器)
+```
+
+**方法学观察**:跨型号最一致的反而是编译器生成的库代码,
+业务逻辑应按**型号分化**(变焦有 / 定焦无)来筛选,
+而不能按共享度排序。
+
+**另一项结构性发现**:各镜头固件**独立链接**——
+偏移级交集 ≈ 0,但 512 字节块级共享 71.4%。
+因此跨型号**不能用文件偏移**定位同一函数,必须使用内容指纹。
+
+详见 [`docs/07-lens-firmware.md`](docs/07-lens-firmware.md)。
+
+### 五、跨厂商 L 卡口:`.plf` 是联盟标准
+
+Sigma 的 L 卡口镜头固件与 Panasonic **同魔数、同结构**:
+
+```
+https://www.sigma-global.com/en/support/download/<8字符>.plf
+```
+
+| 字段 | Panasonic | Sigma |
+|---|---|---|
+| `LENS-UPDATE-FILE-SOF:/EOH:` | 相同 | 相同 |
+| 格式版本 @0x15 | `0x200` | `0x300` |
+| 厂商码 @0x22 | `40` | `50` / `60` |
+| nonce @0x25 | 真实数据 | 全 `FF`(未使用)|
+
+**Sigma 固件含完整 Cortex-M 向量表**(文件偏移 `0x45A`),
+其中 reserved 槽位为 `0` —— 符合 ARM 异常表规范,据此确认处理器架构。
+
+Leica(`SLLens01.plf`)与 Samyang(`7801V340.plf`)同格式,
+**`.plf` 为 L-Mount Alliance 的通用约定**。
+
+详见 [`docs/09-third-party-lens.md`](docs/09-third-party-lens.md)。
+
+---
+
+## 方法与局限
+
+**数据来源**
+- 全部结论来自**官方公开固件更新包**的格式分析与**自有设备**的协议探测
+- 未使用任何泄露的厂商资料或未公开文档
+
+**可复现性**
+- 每项结论附有验证依据(哈希比对、跨机型对比、结构性检验)
+- 脚本位于 `analysis/`,按 `body/` / `lens/` 分类,可逐条复现
+
+**已知局限(如实记录)**
+- 机身固件数据分区在只读分析下保持密文,其内部结构无法进一步展开
+- 镜头固件的函数边界依赖所选分析方法;四种方法的精度/召回权衡已在
+  `docs/07` §22–26 中量化记录,部分早期结论已勘误并撤回
+- `0x40` 处 4 字节字段的校验算法尚未确定(已试 sum/CRC32/Adler32/MD5/SHA 系列)
+
+---
+
+## License
+
+[CC BY-NC 4.0](LICENSE) — 允许署名的非商业性分享,禁止商业使用。
+
+## 说明
+
+本项目独立完成。厂商私有协议的具体用途仍待进一步研究。

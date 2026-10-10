@@ -1,0 +1,92 @@
+# 固件获取 — 官方来源与直链
+
+> 结论先行:**官方发布的是全量固件镜像(157 MB),不是增量差分包。**
+> "只有增量包"的假设已被推翻,不需要构建差分链,也无需从机身提取基线。
+
+---
+
+## 1. 获取路径(已打通)
+
+松下官网对脚本请求有 CDN 反爬,但**日本支持站可直连**。完整路径:
+
+```
+https://panasonic.jp/dc/                                    ← 入口(200)
+  → https://av.jpn.support.panasonic.com/support/dsc/download/top.html
+  → ./index4.html        "デジタル一眼カメラ(フルサイズ)" 全画幅机型列表
+  → ff/dl/s5m2x.html     机型下载详情页
+  → ff/dl/s5m2x_dl.html  下载确认页(许可协议)
+  → 文件直链
+```
+
+### 固件直链
+
+```
+https://panasonic.jp/support/share2/eww/com/dsc/ff/zip/S5m2XV27.zip
+```
+
+| 项 | 值 |
+|---|---|
+| 文件名 | `S5m2XV27.zip` |
+| 大小 | 157,760,717 字节 (≈ 150.4 MiB) |
+| 压缩 | ZIP |
+| 解压后 | `S5m2XV27.bin` |
+| 适用 | Windows / Mac 通用 |
+| 版本 | **Ver.2.7** |
+| 发布 | 2026-03-10 |
+
+Referer 需指向下载确认页,否则可能被拒:
+`https://av.jpn.support.panasonic.com/support/dsc/download/ff/dl/s5m2x_dl.html`
+
+---
+
+## 2. 请求要点(踩过的坑)
+
+| 问题 | 解决 |
+|---|---|
+| `panasonic.com` 返回 403 | 加完整浏览器请求头(UA/Accept/Sec-Fetch-*),或改走 `panasonic.jp` |
+| `web_search` 工具不可用 | 该工具服务端挂在一个失效代理(`127.0.0.1:7897`)上,改用 .NET 直接抓页面 |
+| Python `urllib` 连接被拒 | Windows 下 `urllib` 从**注册表**读代理设置,不受环境变量影响;须用 .NET `HttpWebRequest` 并显式设 `Proxy=$null` |
+| 页面中文乱码 | 页面是 **UTF-8**,不是 Shift-JIS |
+| 搜索引擎把型号词拆散 | Bing 中国版会把 `DC-S5M2X` 拆成"DC 漫画";直接沿官网导航链走更可靠 |
+
+**统一做法**:.NET `HttpWebRequest` + `Proxy=$null` + 完整浏览器头 + UTF-8 解码。
+
+---
+
+## 3. 版本历史(Ver.2.7 页面所列)
+
+| 日期 | 版本 | 主要内容 |
+|---|---|---|
+| 2026-03-10 | **2.7** | 支持 DMW-DMS1 麦克风;支持 LUMIX Flow (Ver.1.5+);稳定性改进 |
+| 2025-12-23 | 2.6 | 修复防抖开启时移动相机偶发四角缺块;修复部分 SD 卡录像噪声 |
+| 2025-11-18 | 2.5 | 修复无线连接中断导致录像停止;修复 APS-C 镜头不关机拆镜产生环状噪声 |
+| 2025-10-20 | 2.4 | DJI 云台蓝牙兼容;OM 闪光灯兼容;LUMIX Flow (Ver.1.3+) 支持;快门速度限制器;对焦环功能自定义 |
+
+> 页面还列有更早版本。**历史版本对固件对比分析很有价值**(能精确定位某项功能改动落在哪些字节/函数),
+> 建议一并下载:同一路径下把 `S5m2XV27.zip` 换成旧版本文件名即可。
+> 旧版本文件名可从各版本页面的下载确认页解析得到。
+
+---
+
+## 4. 姊妹机型(对比分析用)
+
+同一站点提供 S5M2 全量固件,可用于差分对比、识别机型特有代码:
+
+- `https://av.jpn.support.panasonic.com/support/dsc/download/ff/dl/s5m2.html`
+- 文件名形如 `S5m2V37.zip` → `S5m2V37.bin`(DC-S5M2 Ver.3.7,2026-03-10)
+
+> S5M2 与 S5M2X 硬件高度同源,**二进制对比是定位"机型功能差异"最高效的手段**
+> —— X 独有的功能(如 ProRes RAW / SS/RAW 输出)相关代码差异会直接浮现。
+
+---
+
+## 5. 付费功能(明确不做)
+
+下载页 `ff/enhance/` 路径下列出的是**付费功能升级包**:
+
+- `DMW-SFU2` — DC-S5M2 的 V-Log 扩展(独立销售)
+- `DMW-SFU3A` / `DMW-SFU1` — 其他机型
+- 激活入口:`https://eww.pavc.panasonic.co.jp/enhance/ActivationTop/ja`
+
+这些属于**付费授权**。本项目**不研究、不涉及**。
+与固件格式研究是完全不同的两件事。

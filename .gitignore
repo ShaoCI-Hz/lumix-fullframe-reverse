@@ -1,0 +1,28 @@
+# === 固件二进制(版权归厂商,绝不提交) ===
+firmware/
+*.bin
+*.zip
+*.lf2
+
+# === 逆向过程产物(含固件数据,不提交) ===
+work/
+out/
+extracted/
+
+# === Python ===
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# === 编辑器 / 系统 ===
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Reasonix / 本地工具 ===
+.reasonix/
