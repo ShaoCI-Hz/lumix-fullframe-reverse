@@ -1,0 +1,142 @@
+=== 4001V020.plf 反汇编分析 (497,494 B) ===
+
+=== 1) Cortex-M 向量表候选(连续 4 字节,值落在文件内且 bit0=1)===
+  @0x078C14 (odd=6): 0x00030004 0x00030003 0x00030003 0x00030004 0x00040003 0x00030003 0x00030003 0x00040003
+  @0x078C18 (odd=6): 0x00030003 0x00030003 0x00030004 0x00040003 0x00030003 0x00030003 0x00040003 0x00030003
+  @0x078C40 (odd=6): 0x0003007C 0x00030003 0x00030004 0x00040003 0x00030003 0x00030003 0x00040003 0x00030003
+  @0x078C48 (odd=6): 0x00030004 0x00040003 0x00030003 0x00030003 0x00040003 0x00030003 0x00030004 0x00030003
+
+=== 2) 代码/数据分区(0x1000 窗口:有效指令比)===
+  @0x000000  data  (instr_ratio=0.05)
+  @0x02C000  mixed  (instr_ratio=0.24)
+  @0x02D000  code  (instr_ratio=0.56)
+  @0x02E000  data  (instr_ratio=0.10)
+  @0x031000  code  (instr_ratio=0.73)
+  @0x032000  data  (instr_ratio=0.00)
+  @0x036000  mixed  (instr_ratio=0.39)
+  @0x038000  data  (instr_ratio=0.03)
+  @0x03A000  mixed  (instr_ratio=0.39)
+  @0x03B000  code  (instr_ratio=0.71)
+  @0x03C000  data  (instr_ratio=0.01)
+  @0x03D000  mixed  (instr_ratio=0.25)
+  @0x040000  code  (instr_ratio=0.51)
+  @0x041000  data  (instr_ratio=0.05)
+  @0x042000  code  (instr_ratio=0.58)
+  @0x043000  data  (instr_ratio=0.11)
+  @0x045000  code  (instr_ratio=0.79)
+  @0x047000  mixed  (instr_ratio=0.30)
+  @0x049000  data  (instr_ratio=0.03)
+  @0x04E000  code  (instr_ratio=0.81)
+  @0x050000  mixed  (instr_ratio=0.21)
+  @0x052000  data  (instr_ratio=0.16)
+  @0x053000  mixed  (instr_ratio=0.30)
+  @0x057000  code  (instr_ratio=0.71)
+  @0x058000  data  (instr_ratio=0.11)
+  @0x059000  mixed  (instr_ratio=0.29)
+  @0x05A000  data  (instr_ratio=0.17)
+  @0x05C000  mixed  (instr_ratio=0.34)
+  @0x05D000  data  (instr_ratio=0.04)
+  @0x060000  mixed  (instr_ratio=0.43)
+  @0x061000  data  (instr_ratio=0.11)
+  @0x062000  code  (instr_ratio=0.79)
+  @0x064000  data  (instr_ratio=0.08)
+  @0x065000  mixed  (instr_ratio=0.48)
+  @0x068000  data  (instr_ratio=0.04)
+
+=== 3) 代码中的 PC 相对加载(LDR literal,可能引用字符串/表)===
+  LDR literal 引用数: 8060
+  指向 ASCII 的引用: 216
+    0x000FD4 -> 0x001128  |L.8.@.f.G!@`J.f.E!@`F`@.f.....~.|
+    0x001392 -> 0x00152A  |@. .8.g.B!@QKPxQKPyQKPzPKP{.HPJT|
+    0x001656 -> 0x001786  |C!@.eD...@@@@..L.....\B!@.HPIPT#|
+    0x001668 -> 0x001798  |...\B!@.HPIPT#8.d\B!@PH.dlC!@A!.|
+    0x001674 -> 0x0017A4  |T#8.d\B!@PH.dlC!@A!.4.dpC!@A!.4.|
+    0x0016BE -> 0x00185E  |E.T.e.E!@.E.d.G!@.H.ftC!@.F.L.<.|
+    0x002BF0 -> 0x002D44  |L.8.@.f.G1@`J.f.E1@`F`@.f.....~.|
+    0x002C7E -> 0x002E42  |F.I.L.8.f.A1@aF.f.A1@aFaF`F.f.A1|
+    0x002C82 -> 0x002E46  |L.8.f.A1@aF.f.A1@aFaF`F.f.A1@aFa|
+    0x003272 -> 0x0033A2  |C1@.e\B1@.HPIPT#8.d\B1@PH.dlC1@A|
+    0x003284 -> 0x0033B4  |d\B1@PH.dlC1@A!.4.dpC1@A!.4.dhC1|
+    0x003290 -> 0x0033C0  |@A!.4.dpC1@A!.4.dhC1@.p...H.f`B1|
+
+=== 4) 代码区 0x039800 反汇编(前 80 条)===
+  0x039800  941e       subs     r4, r2, #2
+  0x039802  0310       asrs     r3, r0, #0x20
+  0x039804  d41a       subs     r4, r2, r3
+  0x039806  0408       lsrs     r4, r0, #0x20
+  0x039808  bc1a       subs     r4, r7, r2
+  0x03980A  0310       asrs     r3, r0, #0x20
+  0x03980C  0400       movs     r4, r0
+  0x03980E  1d41       asrs     r5, r3
+  0x039810  c184       strh     r1, [r0, #0x26]
+  0x039812  0310       asrs     r3, r0, #0x20
+  0x039814  dff800f0   ldr.w    pc, [pc, #0]
+  0x039818  8f97       str      r7, [sp, #0x23c]
+  0x03981A  0108       lsrs     r1, r0, #0x20
+  0x03981C  f0b4       push     {r4, r5, r6, r7}
+  0x03981E  0028       cmp      r0, #0
+  0x039820  01d0       beq      #0x39826
+  0x039822  0029       cmp      r1, #0
+  0x039824  02d1       bne      #0x3982c
+  0x039826  dff81002   ldr.w    r0, [pc, #0x210]
+  0x03982A  7fe0       b        #0x3992c
+  0x03982C  4a68       ldr      r2, [r1, #4]
+  0x03982E  4260       str      r2, [r0, #4]
+  0x039830  8a68       ldr      r2, [r1, #8]
+  0x039832  0261       str      r2, [r0, #0x10]
+  0x039834  ca68       ldr      r2, [r1, #0xc]
+  0x039836  4261       str      r2, [r0, #0x14]
+  0x039838  0a69       ldr      r2, [r1, #0x10]
+  0x03983A  8261       str      r2, [r0, #0x18]
+  0x03983C  91f91420   ldrsb.w  r2, [r1, #0x14]
+  0x039840  9207       lsls     r2, r2, #0x1e
+  0x039842  c261       str      r2, [r0, #0x1c]
+  0x039844  8a69       ldr      r2, [r1, #0x18]
+  0x039846  0262       str      r2, [r0, #0x20]
+  0x039848  0a68       ldr      r2, [r1]
+  0x03984A  12f46062   ands     r2, r2, #0xe00
+  0x03984E  b2f5606f   cmp.w    r2, #0xe00
+  0x039852  01d1       bne      #0x39858
+  0x039854  0123       movs     r3, #1
+  0x039856  00e0       b        #0x3985a
+  0x039858  0023       movs     r3, #0
+  0x03985A  0c79       ldrb     r4, [r1, #4]
+  0x03985C  14f00404   ands     r4, r4, #4
+  0x039860  a408       lsrs     r4, r4, #2
+  0x039862  0025       movs     r5, #0
+  0x039864  24e0       b        #0x398b0
+  0x039866  0022       movs     r2, #0
+  0x039868  dff8d071   ldr.w    r7, [pc, #0x1d0]
+  0x03986C  edb2       uxtb     r5, r5
+  0x03986E  27f81520   strh.w   r2, [r7, r5, lsl #1]
+  0x039872  0de0       b        #0x39890
+  0x039874  0022       movs     r2, #0
+  0x039876  1a40       ands     r2, r3
+  0x039878  d2b2       uxtb     r2, r2
+  0x03987A  2242       tst      r2, r4
+  0x03987C  f3d0       beq      #0x39866
+  0x03987E  7ff00102   mvns     r2, #1
+  0x039882  96fbf2f2   sdiv     r2, r6, r2
+  0x039886  dff8b471   ldr.w    r7, [pc, #0x1b4]
+  0x03988A  edb2       uxtb     r5, r5
+  0x03988C  27f81520   strh.w   r2, [r7, r5, lsl #1]
+  0x039890  42f21077   movw     r7, #0x2710
+  0x039894  4a6f       ldr      r2, [r1, #0x74]
+  0x039896  07fb0626   mla      r6, r7, r6, r2
+  0x03989A  4a6f       ldr      r2, [r1, #0x74]
+  0x03989C  5200       lsls     r2, r2, #1
+  0x03989E  96fbf2f2   sdiv     r2, r6, r2
+  0x0398A2  12b2       sxth     r2, r2
+  0x0398A4  dff89861   ldr.w    r6, [pc, #0x198]
+  0x0398A8  edb2       uxtb     r5, r5
+  0x0398AA  46f82520   str.w    r2, [r6, r5, lsl #2]
+  0x0398AE  6d1c       adds     r5, r5, #1
+  0x0398B0  edb2       uxtb     r5, r5
+  0x0398B2  102d       cmp      r5, #0x10
+  0x0398B4  13d2       bhs      #0x398de
+  0x0398B6  edb2       uxtb     r5, r5
+  0x0398B8  01eb8502   add.w    r2, r1, r5, lsl #2
+  0x0398BC  d269       ldr      r2, [r2, #0x1c]
+  0x0398BE  edb2       uxtb     r5, r5
+  0x0398C0  00eb8506   add.w    r6, r0, r5, lsl #2
+  0x0398C4  c6f88020   str.w    r2, [r6, #0x80]
