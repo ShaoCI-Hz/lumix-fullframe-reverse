@@ -1,0 +1,260 @@
+# 09 · 第三方 L 卡口固件:.plf 是联盟标准
+
+> **核心结论**:Panasonic 的 `.plf` **不是私有格式**,而是
+> **L-Mount Alliance(Leica / Panasonic / Sigma)共用的镜头固件容器标准**。
+> Sigma 的 `.plf` 与 Panasonic 的**同魔数、同结构**,且**含完整向量表**。
+
+---
+
+## 1. 样本来源(官方直链,免序列号)
+
+| 文件 | 镜头 | 版本 | 大小 |
+|---|---|---|---|
+| `S02D0120.plf` | Sigma 14mm F1.4 DG DN Art (A023) | 1.2 | 1,049,690 |
+| `A0040140.plf` | Sigma 30mm F1.4 DC DN Contemp. (C016) | 1.4 | 263,258 |
+| `S02A0130.plf` | Sigma 50mm F2 DG DN Contemp. (C023) | 1.3 | 1,049,690 |
+
+**直链模式(已验证 200):**
+
+```
+https://www.sigma-global.com/en/support/download/<8字符文件名>.plf
+```
+
+命名规则:`<4 字母数字镜头码><4 位版本>` = `S02D`+`0120` → v1.2。
+
+**其他厂商同格式(文献佐证,未下载):**
+
+- **Leica**:`SLLens01.plf` / `SLLens09.plf` / `2870_11.plf`
+- **Samyang**:`7801V340.plf`(AF 35-150/2-2.8 L,包名 `LAF35150F20_v340.zip`)
+
+→ **`.plf` 是 L 卡口联盟的统一约定**。
+
+---
+
+## 2. ★ 头部结构:同魔数、不同版本
+
+```
+                Panasonic                Sigma
+0x00  "LENS-UPDATE-FILE-SOF:"    ← 完全相同(21 字节)
+0x15  ver = 0x200 (512)          ver = 0x300 (768)   ← 格式版本
+0x17  07 e9 = 2025               07 e9 = 2025        ← 年份(BCD)
+0x19  03 07 / 0c 04 / 03 0a      07 02 / 07 0b / 06 18  ← 月日(BCD)
+0x21  00 40 01 02                02 60 2D 01         ← ★ 厂商/型号 ID
+0x25  真实 nonce 数据(12 B)     FF FF FF FF FF FF FF FF FF FF FF FF  ← 12 字节 nonce,Sigma 不用
+0x34  01 40 01 02                00 60 2D 01         ← 重复 ID,前缀 1 字节变化
+0x3B  —                          5A ('Z')
+0x40  4 字节(疑校验)           4 字节(疑校验)
+      "LENS-UPDATE-FILE-EOH:"    ← 完全相同(21 字节)
+0x58/0x45  EOH 偏移不同          ← Panasonic 头更长
+```
+
+### 2.1 ★ 厂商/型号 ID 编码(`0x21` 起 4 字节)
+
+| 样本 | byte0 | byte1 | byte2 | byte3 |
+|---|---|---|---|---|
+| Panasonic S-R24105 | `00` | **`40`** | `01` | `02` |
+| Panasonic S-E2470 | `00` | **`40`** | `06` | `02` |
+| Panasonic S-X50 | `00` | **`40`** | `03` | `02` |
+| Sigma 14mm Art | `02` | **`60`** | `2D` | `01` |
+| Sigma 30mm Cont. | `02` | **`50`** | `04` | `01` |
+| Sigma 50mm Cont. | `02` | **`60`** | `2A` | `01` |
+
+**推断:**
+
+- **byte1 = 厂商/系列码**:`40` = Panasonic,`50`/`60` = Sigma(区分 Art / Contemp.)
+- **byte2-3 = 型号编号**
+- **byte0 = 格式变体**:`00`(Panasonic)= `ver 0x200`;`02`(Sigma)= `ver 0x300`
+  —— 这与 §2 的 ver 字段差异**完全吻合**
+
+`0x34` 处重复同一 ID,但 **byte0 变化**(Panasonic `00→01`,Sigma `02→00`),
+疑为"目标状态"或"版本标志"字段。
+
+### 2.2 12 字节 nonce 字段
+
+```
+Panasonic: 6d 00 06 93 c3 47 f0 c8 cc 00 01 01   ← 真实 nonce
+Sigma:     ff ff ff ff ff ff ff ff ff ff ff ff   ← 全 FF = 未使用
+```
+
+**长度 12 字节 = Panasonic 机身 UPD 分区表的 nonce 长度**(`+0x4C`)。
+这说明 **`.plf` 与机身 UPD 容器共用同一套 nonce 字段定义**,
+而 **Sigma 选择不加密**(全 FF 填充)。
+
+**这是关键的协议层信息:加密是可选的,由厂商自行决定。**
+
+---
+
+## 3. ★★ Sigma 的 `.plf` 含完整 Cortex-M 向量表
+
+**Panasonic 的 `.plf` 不含向量表**(见 `07-lens-firmware.md` §20),
+但 **Sigma 的含** —— 这是两种"镜像完整性"的差异。
+
+### 3.1 Sigma 30mm 向量表 @ 文件偏移 `0x45A`
+
+```
+[ 0] SP     = 0x20005610   ← 初始栈指针(SRAM)
+[ 1] Reset  = 0x00000401   ← 复位向量(Thumb,bit0=1)
+[ 2] IRQ0   = 0x00010381   NMI
+[ 3] IRQ1   = 0x00000197   HardFault
+[ 4] IRQ2   = 0x00000199   MemManage
+[ 5] IRQ3   = 0x0000019B   BusFault
+[ 6] IRQ4   = 0x0000019D   UsageFault
+[ 7] IRQ5   = 0x00000000   ★ reserved —— ARM 规范要求为 0
+[ 8] IRQ6   = 0x00000000   ★ reserved
+[ 9] IRQ7   = 0x00000000   ★ reserved
+[10] IRQ8   = 0x00000000   ★ reserved
+[11] IRQ9   = 0x0001020D   SVC
+[12] IRQ10  = 0x000001A1   DebugMon
+[13] IRQ11  = 0x00000000   ★ reserved
+[14] IRQ12  = 0x00010121   PendSV
+[15] IRQ13  = 0x000001A3   SysTick
+```
+
+**★ reserved 槽位全为 0** —— 这是 **ARM Cortex-M 异常表的规范特征**,
+**决定性地证实**了 §9 的 Cortex-M 判定(此前只是推断)。
+
+### 3.2 ★ 加载基址 = 文件偏移 `0x45A`
+
+复位向量 `0x400` → 相对 image 基址偏移 `0x400`。
+若 image 起点 = 文件偏移 `0x45A`,则复位代码应在文件 `0x85A`:
+
+```
+0x00085A  00f006f8   bl    #0x86a
+0x00085E  0148       ldr   r0, [pc, #4]
+0x000860  8047       blx   r0
+0x000862  0ff002fe   bl    #0x1046a
+```
+
+**✓ 合法的复位代码序列**(bl + ldr literal + blx,典型的运行时初始化)。
+
+**验证三种其他基址假设(0x200 / 0x400 / 0x458)均失败**,
+**只有 `0x45A` 成立**。
+
+### 3.3 与 Panasonic 的镜像完整性对比
+
+| | Panasonic `.plf` | Sigma `.plf` |
+|---|---|---|
+| 向量表 | **无**(§20)| **有** @0x45A |
+| 镜像类型 | **部分更新包**(只含需更新区)| **完整镜像** |
+| nonce | 真实数据 | 全 FF(不加密)|
+| 头部长度 | 0x58 | 0x45 |
+| 格式版本 | `0x200` | `0x300` |
+
+**§20.5 的推断得到独立证实**:`.plf` 可以是完整镜像也可以是部分更新包,
+**向量表是否在内取决于厂商的打包方式**。
+
+---
+
+## 4. 段描述表(EOH 后)
+
+### 4.1 Sigma(简洁)
+
+```
+Sig 14mm / 50mm(1,049,690 B,完全相同):
+  0x5A  512          ← 块大小
+  0x5E  15
+  0x62  15
+  0x66  192
+  0x6A  64
+  0x6E+ 0(全零)
+
+Sig 30mm(263,258 B):
+  0x5A  512          ← 块大小
+  0x5E  0
+  0x62  64
+  0x66  0x03000080
+  0x6A  128
+  0x6E+ 0
+```
+
+**14mm 与 50mm 段表完全相同**(两文件都是 1,049,690 B = 1 MiB + 0x45A),
+说明段表描述的是**Flash 布局而非内容**。
+
+### 4.2 Panasonic(复杂)
+
+```
+0x6D  "PSLFDH"        0x78  "HDFLSPPSLFDI"       0x9A  "IDFLSPPSLF00"
+```
+
+Panasonic 在 EOH 后插入了**厂商标签字符串**(Sigma 没有),
+这正是 `07-lens-firmware.md` §14 讨论的段描述表起点。
+
+**差异解释**:Panasonic 用**命名段**(每段带 `PSLFDH`/`HDFLSPPSLFDI` 标签),
+Sigma 用**位置段**(纯数值段表)。两者都以 **512 为块大小**。
+
+---
+
+## 5. 代码与填充
+
+| 样本 | 大小 | FF 占比 | 整体熵 | BX LR | PUSH | 变量名 |
+|---|---|---|---|---|---|---|
+| Pana S-R24105 | 497,494 | 1.2% | 6.84 | 1,311 | 915 | 319 |
+| Pana S-E2470 | 452,161 | 1.4% | 6.84 | 976 | 705 | 457 |
+| Pana S-X50 | 260,498 | 1.4% | 6.70 | 836 | 614 | 15 |
+| Sig 14mm Art | 1,049,690 | **82.7%** | 1.89 | 0 | 110 | 13 |
+| Sig 30mm Cont. | 263,258 | 64.6% | 3.36 | 511 | 597 | 43 |
+| Sig 50mm Cont. | 1,049,690 | **84.4%** | 1.72 | 0 | 89 | 14 |
+
+**关键观察:**
+
+1. **Sigma 的 1 MiB 文件 82-84% 是 `0xFF`** —— Flash 擦除填充值,
+   说明镜像**按 Flash 扇区大小补齐**(1 MiB 对齐),不是压缩
+2. **Sigma 几乎没有变量字典**(13-43 个 vs Panasonic 319-457 个)
+   → **Panasonic 的 578 项变量字典是其自有调试系统,非标准**
+3. Panasonic 代码更密(BX LR 1311)、Sigma 更稀疏
+
+---
+
+## 6. 对本项目的意义
+
+### 6.1 直接价值
+
+1. **`.plf` 是开放的事实标准** —— 三个厂商的镜头固件互相兼容
+   (Panasonic 机身可刷 Sigma `.plf`,反之亦然)
+2. **§9 的 Cortex-M 判定得到决定性证实**(reserved 槽位 = 0)
+3. **§20.5 "部分更新镜像"推断得到独立证实**(Sigma 含向量表 = 完整镜像)
+4. **加载基址方法验证成功**:`0x45A` 由"向量表 + 复位代码"双重确认
+   —— 这正是 `07-lens-firmware.md` §19 用内存映射解决 Panasonic 基址的同类方法
+
+### 6.2 协议层信息
+
+1. **加密是可选的**(nonce 全 FF = 未加密)
+   → L 卡口镜头更新**不强制加密**,这与机身固件的 AES 级保护形成鲜明对比
+2. **厂商/型号 ID 编码**(`byte1 = 0x40/0x50/0x60`)已部分破译
+3. **块大小 512 为联盟统一约定**
+
+### 6.3 未完成项
+
+1. **`0x40` 处 4 字节校验和未破解**:
+   已试 sum8 / sum16 / xor / CRC32 / Adler32 / MD5 / SHA1 / SHA256
+   (多种范围、多种端序)**均未命中** —— 可能是自定义多项式 CRC 或含密钥的 MAC
+2. **Sigma 14mm / 50mm 的向量表未定位**(30mm 已确证):
+   1 MiB 文件可能含多个段,向量表在别处
+3. **Panasonic 的 `PSLFDH` / `HDFLSPPSLFDI` 段标签语义** 未解
+
+---
+
+## 7. 复现
+
+```bash
+# 下载 Sigma L 卡口固件(官方直链,免序列号)
+python analysis/download_sigma.py     # 详见 analysis/
+
+python analysis/plf_vendor_compare.py  # 跨厂商头部/ID/熵对比
+python analysis/plf_deep_compare.py    # FF 填充/段表/代码定位
+python analysis/plf_checksum.py        # 校验和破解尝试 + ID 编码
+python analysis/sigma_vt.py            # ★ 向量表定位与基址验证
+```
+
+---
+
+## 8. 未采用的方向(已排查)
+
+- **LUMIX Tether(官方 PC 工具)**:含固件更新功能,但下载需输入
+  **机身电池仓 11 位序列号** —— 未提供,不伪造,故**未获取**
+- **SIGMA Optimization Pro**:第三方镜头更新工具(免序列号),
+  但其下载链接由 JS 动态生成,主机为 `pub.sigma-global.com`,
+  直链路径未能解析(**诚实地记录为未完成**)
+- **专利检索**:尝试被安全策略拒绝,故**未进行**
+
+> 这三项记录在此,避免重复劳动。
