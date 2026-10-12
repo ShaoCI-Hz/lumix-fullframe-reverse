@@ -225,7 +225,7 @@ Sigma 用**位置段**(纯数值段表)。两者都以 **512 为块大小**。
 
 ### 6.3 未完成项
 
-1. **`0x40` 处 4 字节校验和未破解**:
+1. **`0x40` 处 4 字节校验和未确定**:
    已试 sum8 / sum16 / xor / CRC32 / Adler32 / MD5 / SHA1 / SHA256
    (多种范围、多种端序)**均未命中** —— 可能是自定义多项式 CRC 或含密钥的 MAC
 2. **Sigma 14mm / 50mm 的向量表未定位**(30mm 已确证):
@@ -238,12 +238,12 @@ Sigma 用**位置段**(纯数值段表)。两者都以 **512 为块大小**。
 
 ```bash
 # 下载 Sigma L 卡口固件(官方直链,免序列号)
-python analysis/download_sigma.py     # 详见 analysis/
+python analysis/lens/download_sigma.py     # 详见 analysis/
 
-python analysis/plf_vendor_compare.py  # 跨厂商头部/ID/熵对比
-python analysis/plf_deep_compare.py    # FF 填充/段表/代码定位
-python analysis/plf_checksum.py        # 校验和破解尝试 + ID 编码
-python analysis/sigma_vt.py            # ★ 向量表定位与基址验证
+python analysis/lens/plf_vendor_compare.py  # 跨厂商头部/ID/熵对比
+python analysis/lens/plf_deep_compare.py    # FF 填充/段表/代码定位
+python analysis/lens/plf_checksum.py        # 校验和分析尝试 + ID 编码
+python analysis/lens/sigma_vt.py            # ★ 向量表定位与基址验证
 ```
 
 ---

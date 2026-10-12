@@ -79,7 +79,7 @@ IntFreq / DifAmpP / DifAmpS / AmpPrev / AmpShiftPhShift
 ObsGain / Phase
 ```
 
-> 完整列表见 `analysis/lens_symbols.txt`(578 项,含偏移)。
+> 完整列表见 `analysis/lens/lens_symbols.txt`(578 项,含偏移)。
 
 ---
 
@@ -170,7 +170,7 @@ https://panasonic.jp/support/share2/eww/com/dsc/ff/zip/<型号>V<版本>.zip
 | **控制/模式**(49) | `ActSet` `AdjSet` `DrvMode` `MoveMode` `TarMode` |
 | **调试/错误**(16) | `DbgMode` `ErrLSB` `ErrMSB` `LockErr` `StopErr` `LogData1~8` |
 
-> 完整清单:`analysis/lens_symbols_all.txt`(1958 行,各符号偏移 + 329 个变焦共享符号)。
+> 完整清单:`analysis/lens/lens_symbols_all.txt`(1958 行,各符号偏移 + 329 个变焦共享符号)。
 
 ### 7.3 结论
 
@@ -241,10 +241,10 @@ https://panasonic.jp/support/share2/eww/com/dsc/ff/zip/<型号>V<版本>.zip
 ### 9.5 复现
 
 ```bash
-python analysis/lens_disasm.py         # 代码区定位(Thumb 特征密度)
-python analysis/lens_disasm2.py        # 向量表/代码分区/字符串引用
-python analysis/lens_header_struct.py  # 头部与段结构
-# 完整反汇编输出:analysis/lens_disasm_output.txt
+python analysis/lens/lens_disasm.py         # 代码区定位(Thumb 特征密度)
+python analysis/lens/lens_disasm2.py        # 向量表/代码分区/字符串引用
+python analysis/lens/lens_header_struct.py  # 头部与段结构
+# 完整反汇编输出:analysis/lens/lens_disasm_output.txt
 ```
 
 ### 9.6 结论
@@ -295,8 +295,8 @@ BL/BLX 指令        5,688 条
 ### 10.4 复现
 
 ```bash
-python analysis/lens_segtable.py   # 段标记/向量表/段边界分析
-python analysis/lens_bl_verify.py  # BL 目标分布与加载地址验证
+python analysis/lens/lens_segtable.py   # 段标记/向量表/段边界分析
+python analysis/lens/lens_bl_verify.py  # BL 目标分布与加载地址验证
 ```
 
 ### 10.5 待办的下一步
@@ -311,9 +311,9 @@ python analysis/lens_bl_verify.py  # BL 目标分布与加载地址验证
 
 ---
 
-## 11. ★ 绕过段表:递归下降反汇编(已成功)
+## 11. ★ 段表的替代路径:种子 + 前向扫描(已成功)
 
-**关键认识:不需要段表。** 用"函数序言"作种子 + 递归下降,直接得到可信函数集合。
+**关键认识:该方法不依赖段表。** 用"函数序言"作种子 + 递归下降,直接得到可信函数集合。
 
 ### 11.1 方法
 
@@ -415,7 +415,7 @@ BL 目标(被调用点)        2,532 个
 
 > 本节初版把该方法称为"递归下降反汇编",**该称呼不准确**。
 >
-> 实际实现(`analysis/lens_recursive.py` 的 `follow_targets()`)是:
+> 实际实现(`analysis/lens/lens_recursive.py` 的 `follow_targets()`)是:
 > **从每个种子前向线性解码到第一个 return,并"收集"遇到的跳转目标** ——
 > 它**从不下降进这些目标**。正确名称是
 > **"种子 + 前向线性扫描"(seed-based linear sweep)**,而非递归下降。
@@ -429,11 +429,11 @@ BL 目标(被调用点)        2,532 个
 ### 11.6 复现
 
 ```bash
-python analysis/lens_recursive.py  # 种子 + 前向扫描(注意:非递归下降)
-python analysis/lens_base.py       # ⚠️ 其"函数区间"测试已被证伪,勿再引用
-python analysis/lens_entry2.py     # 目标入口质量对比
-python analysis/lens_final.py      # 高置信入口列表
-python analysis/verify_claims.py   # ★ 对上述指控的复现验证
+python analysis/lens/lens_recursive.py  # 种子 + 前向扫描(注意:非递归下降)
+python analysis/lens/lens_base.py       # ⚠️ 其"函数区间"测试已被证伪,勿再引用
+python analysis/lens/lens_entry2.py     # 目标入口质量对比
+python analysis/lens/lens_final.py      # 高置信入口列表
+python analysis/lens/verify_claims.py   # ★ 对上述指控的复现验证
 ```
 
 ### 11.7 下一步
@@ -496,13 +496,13 @@ OIS 组    OISPwAdjAdjSet / OisDVL / OisFcharActSet / OISAngleData
 
 由于变量表无地址,改用**间接映射**:
 
-1. 定位变量名**字符串在文件中的地址**(已知,见 `analysis/lens_symbols_all.txt`)
+1. 定位变量名**字符串在文件中的地址**(已知,见 `analysis/lens/lens_symbols_all.txt`)
 2. 在代码中搜索**引用该地址的指令**(Thumb `LDR Rd, [PC, #imm]` 的 literal 池)
 3. 引用某变量的函数 ⇒ 该变量的使用者
 
 ```bash
-python analysis/lens_symtable.py   # 符号区结构分析
-python analysis/lens_symbols_all.txt  # 各符号的文件偏移(已发布)
+python analysis/lens/lens_symtable.py   # 符号区结构分析
+python analysis/lens/lens_symbols_all.txt  # 各符号的文件偏移(已发布)
 ```
 
 ### 12.5 当前进度小结
@@ -576,9 +576,9 @@ LockErr        ChkGyro       Adj_Pos           AvMaxVlF
 ### 13.5 复现
 
 ```bash
-python analysis/lens_ramaddr.py   # 地址字段检测 + RAM 引用统计
-python analysis/lens_xref.py      # 变量 → 引用 → 函数 映射尝试
-# 输出:analysis/lens_var_xref.txt
+python analysis/lens/lens_ramaddr.py   # 地址字段检测 + RAM 引用统计
+python analysis/lens/lens_xref.py      # 变量 → 引用 → 函数 映射尝试
+# 输出:analysis/lens/lens_var_xref.txt
 ```
 
 ### 13.6 下一步(方向已明确)
@@ -625,9 +625,9 @@ python analysis/lens_xref.py      # 变量 → 引用 → 函数 映射尝试
 ### 13.9 复现
 
 ```bash
-python analysis/lens_ramaddr.py   # 地址字段检测 + RAM 引用统计
-python analysis/lens_xref.py      # 变量 → 引用 → 函数 映射尝试
-python analysis/verify_claims.py  # ★ 对 §11.3 结论的复现式证伪
+python analysis/lens/lens_ramaddr.py   # 地址字段检测 + RAM 引用统计
+python analysis/lens/lens_xref.py      # 变量 → 引用 → 函数 映射尝试
+python analysis/lens/verify_claims.py  # ★ 对 §11.3 结论的复现式证伪
 ```
 
 ---
@@ -711,8 +711,8 @@ python analysis/verify_claims.py  # ★ 对 §11.3 结论的复现式证伪
 2. **验证递增性**:表项地址序列应覆盖 `[0xB0, EOF)` 且不重叠
 
 ```bash
-python analysis/plf_struct.py    # 头部字段 / 跨样本对比 / 成对值搜索
-python analysis/plf_head2.py     # 头部反汇编判定 + 0x70 模式分析
+python analysis/lens/plf_struct.py    # 头部字段 / 跨样本对比 / 成对值搜索
+python analysis/lens/plf_head2.py     # 头部反汇编判定 + 0x70 模式分析
 ```
 
 **本节的价值**:把"头部是代码还是表"这一悬置问题**确定为表**,
@@ -791,9 +791,9 @@ python analysis/plf_head2.py     # 头部反汇编判定 + 0x70 模式分析
 ### 15.4 复现
 
 ```bash
-python analysis/plf_segtable.py    # 跨样本头部字段对比
-python analysis/plf_entropy.py     # 逐块熵曲线 + 数据起点推断
-python analysis/plf_data_start.py  # 内容检查(推翻熵结论)
+python analysis/lens/plf_segtable.py    # 跨样本头部字段对比
+python analysis/lens/plf_entropy.py     # 逐块熵曲线 + 数据起点推断
+python analysis/lens/plf_data_start.py  # 内容检查(推翻熵结论)
 ```
 
 ### 15.5 未解决 / 下一步
@@ -900,8 +900,8 @@ BtnTrkFStopper   AmpShiftPhShift   Apvel2Imode ...
 ### 16.4 复现
 
 ```bash
-python analysis/lens_cross.py       # 跨样本序言/块级/变量名共享
-python analysis/lens_zoom_prime.py  # 变焦 vs 定焦 分组对比
+python analysis/lens/lens_cross.py       # 跨样本序言/块级/变量名共享
+python analysis/lens/lens_zoom_prime.py  # 变焦 vs 定焦 分组对比
 ```
 
 ### 16.5 方法论修正(重要)
@@ -1005,7 +1005,7 @@ python analysis/lens_zoom_prime.py  # 变焦 vs 定焦 分组对比
 ### 17.6 复现
 
 ```bash
-python analysis/lens_fingerprint.py   # 地址无关指纹 + 跨型号匹配
+python analysis/lens/lens_fingerprint.py   # 地址无关指纹 + 跨型号匹配
 ```
 
 ### 17.7 下一步
@@ -1141,18 +1141,18 @@ python analysis/lens_fingerprint.py   # 地址无关指纹 + 跨型号匹配
 ### 18.4 交付物
 
 ```
-analysis/lens_function_ids.txt            全 6 型号共享的 17 个函数编号表
-analysis/lens_fingerprint_report.txt      指纹聚类完整报告(含分类与运行时库清单)
-analysis/lens_shared_biggest.asm          最大共享函数的完整反汇编
-analysis/lens_zoom_only_funcs.asm         20 个变焦专属函数反汇编(★ 业务逻辑)
+analysis/lens/lens_function_ids.txt            全 6 型号共享的 17 个函数编号表
+analysis/lens/lens_fingerprint_report.txt      指纹聚类完整报告(含分类与运行时库清单)
+analysis/lens/lens_shared_biggest.asm          最大共享函数的完整反汇编
+analysis/lens/lens_zoom_only_funcs.asm         20 个变焦专属函数反汇编(★ 业务逻辑)
 ```
 
 ### 18.5 复现
 
 ```bash
-python analysis/lens_cluster.py       # 6 型号聚类 + 编号表 + 最大函数反汇编
-python analysis/lens_classify.py      # 运行时库识别 + 变焦专属函数提取
-python analysis/lens_zoomonly_asm.py  # 变焦专属函数反汇编
+python analysis/lens/lens_cluster.py       # 6 型号聚类 + 编号表 + 最大函数反汇编
+python analysis/lens/lens_classify.py      # 运行时库识别 + 变焦专属函数提取
+python analysis/lens/lens_zoomonly_asm.py  # 变焦专属函数反汇编
 ```
 
 ### 18.6 结论与方法论收获
@@ -1171,11 +1171,11 @@ python analysis/lens_zoomonly_asm.py  # 变焦专属函数反汇编
 ```bash
 # 下载(需 Referer)
 # https://panasonic.jp/support/share2/eww/com/dsc/ff/zip/S-R24105V020.zip
-python analysis/lens_analyze.py     # 格式与分段
-python analysis/lens_deep.py        # 符号表与代码定位
-python analysis/lens_diff.py        # 多镜头差分
-python analysis/lens_common.py      # 共享符号分类
-python analysis/lens_sym_dump.py    # 生成完整符号库
+python analysis/lens/lens_analyze.py     # 格式与分段
+python analysis/lens/lens_deep.py        # 符号表与代码定位
+python analysis/lens/lens_diff.py        # 多镜头差分
+python analysis/lens/lens_common.py      # 共享符号分类
+python analysis/lens/lens_sym_dump.py    # 生成完整符号库
 ```
 
 ---
@@ -1271,8 +1271,8 @@ Flash 段不同地址值 1,852 个:
 ### 19.7 复现
 
 ```bash
-python analysis/peripheral_scan.py  # 地址段统计 + 外设/SCS 明细
-python analysis/verify_base.py      # 基址 0x08000000 验证 + 位分布
+python analysis/lens/peripheral_scan.py  # 地址段统计 + 外设/SCS 明细
+python analysis/lens/verify_base.py      # 基址 0x08000000 验证 + 位分布
 ```
 
 ### 19.8 方法论收获(与前两次失败的对比)
@@ -1362,7 +1362,7 @@ SRAM 段引用总数: 3,572
 ### 20.6 复现
 
 ```bash
-python analysis/vector_table.py   # 向量表精确/宽松搜索 + SRAM 分布
+python analysis/lens/vector_table.py   # 向量表精确/宽松搜索 + SRAM 分布
 ```
 
 ---
@@ -1440,7 +1440,7 @@ python analysis/vector_table.py   # 向量表精确/宽松搜索 + SRAM 分布
 ### 21.3 复现
 
 ```bash
-python analysis/periph_map.py   # 外设寄存器统计 + 函数↔地址关系图
+python analysis/lens/periph_map.py   # 外设寄存器统计 + 函数↔地址关系图
 ```
 
 ### 21.4 本轮小结
@@ -1559,8 +1559,8 @@ python analysis/periph_map.py   # 外设寄存器统计 + 函数↔地址关系�
 ### 22.8 复现
 
 ```bash
-python analysis/strict_recursive.py   # 严格种子 + 真递归下降 + 自洽性检验
-# 输出:analysis/lens_strict_funcs.txt(133 个函数的清单)
+python analysis/lens/strict_recursive.py   # 严格种子 + 真递归下降 + 自洽性检验
+# 输出:analysis/lens/lens_strict_funcs.txt(133 个函数的清单)
 ```
 
 ### 22.9 下一步(以及为什么建议交给 Ghidra)
@@ -1667,8 +1667,8 @@ BL 目标命中函数入口: 13,280 / 13,428 = 98.9%
 ### 23.6 复现
 
 ```bash
-python analysis/reachability.py   # 可达性递归下降 + 覆盖率 + 控制流统计
-# 输出:analysis/lens_reachability.txt(2,170 个入口清单)
+python analysis/lens/reachability.py   # 可达性递归下降 + 覆盖率 + 控制流统计
+# 输出:analysis/lens/lens_reachability.txt(2,170 个入口清单)
 ```
 
 ### 23.7 下一步(三个明确且互不依赖的方向)
@@ -1761,9 +1761,9 @@ python analysis/reachability.py   # 可达性递归下降 + 覆盖率 + 控制�
 ### 24.5 复现
 
 ```bash
-python analysis/fixed_bounds.py   # 修正 1:函数内扫描(±8KB)
-python analysis/hybrid.py         # 修正 2:全 BL 目标作入口
-# 输出:analysis/lens_fixed_bounds.txt, analysis/lens_hybrid_funcs.txt
+python analysis/lens/fixed_bounds.py   # 修正 1:函数内扫描(±8KB)
+python analysis/lens/hybrid.py         # 修正 2:全 BL 目标作入口
+# 输出:analysis/lens/lens_fixed_bounds.txt, analysis/lens/lens_hybrid_funcs.txt
 ```
 
 ### 24.6 累计状态(§19-24)
@@ -1871,8 +1871,8 @@ BL 目标落在代码内 : 135/790 = 17.1%
 ### 25.6 复现
 
 ```bash
-python analysis/correct_method.py   # 代码流内收集 + 返回栈定边界
-# 输出:analysis/lens_correct_method.txt
+python analysis/lens/correct_method.py   # 代码流内收集 + 返回栈定边界
+# 输出:analysis/lens/lens_correct_method.txt
 ```
 
 ### 25.7 §19-25 的完整方法学总结
@@ -2010,9 +2010,9 @@ B 独有            : 67,786
 ### 26.7 复现
 
 ```bash
-python analysis/endpoint_segments.py  # 结束点切段法
-python analysis/merge_code.py         # 合并 + 代码区分布图
-# 输出:analysis/lens_endpoint_segments.txt, analysis/lens_merged_code.txt
+python analysis/lens/endpoint_segments.py  # 结束点切段法
+python analysis/lens/merge_code.py         # 合并 + 代码区分布图
+# 输出:analysis/lens/lens_endpoint_segments.txt, analysis/lens/lens_merged_code.txt
 ```
 
 ### 26.8 §19-26 总结:方法矩阵
