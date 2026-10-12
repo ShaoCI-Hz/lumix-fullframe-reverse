@@ -36,18 +36,18 @@ mechanisms**, and **USB/PTP protocols** of the Panasonic LUMIX full-frame line
 
 ## Documentation
 
-Full notes in [`docs/README.md`](docs/README.md), read in order:
+Full notes in [`docs/en/README.md`](docs/en/README.md), read in order:
 
 | # | Document | Contents |
 |---|---|---|
-| 01 | [Firmware acquisition](docs/01-firmware-acquisition.md) | Official sources, direct-link construction, request requirements |
-| 02 | [Firmware structure](docs/02-firmware-structure.md) | UPD container format, partition-table field semantics |
-| 03 | [Encryption analysis](docs/03-crypto-analysis.md) | Algorithm determination, signature mechanism, ruled-out paths |
-| 04 | [USB access](docs/04-protocol-usb.md) | WPD/MTP access status and environment setup |
-| 05 | [Vendor protocol](docs/05-mtp-vendor-protocol.md) | MTP vendor extension channel and opcode enumeration |
-| 06 | [Cross-model comparison](docs/06-multi-model-comparison.md) | 6-model survey and platform evolution |
-| 07 | [Lens firmware](docs/07-lens-firmware.md) | Plaintext structure, disassembly methods, cross-model fingerprint clustering (with errata) |
-| 09 | [Third-party L-mount](docs/09-third-party-lens.md) | Cross-vendor container standard, Sigma vector table |
+| 01 | [Firmware acquisition](docs/en/01-firmware-acquisition.md) | Official sources, direct-link construction, request requirements |
+| 02 | [Firmware structure](docs/en/02-firmware-structure.md) | UPD container format, partition-table field semantics |
+| 03 | [Encryption analysis](docs/en/03-crypto-analysis.md) | Algorithm determination, signature mechanism, ruled-out paths |
+| 04 | [USB access](docs/en/04-protocol-usb.md) | WPD/MTP access status and environment setup |
+| 05 | [Vendor protocol](docs/en/05-mtp-vendor-protocol.md) | MTP vendor extension channel and opcode enumeration |
+| 06 | [Cross-model comparison](docs/en/06-multi-model-comparison.md) | 6-model survey and platform evolution |
+| 07 | [Lens firmware](docs/en/07-lens-firmware.md) | Plaintext structure, disassembly methods, cross-model fingerprint clustering (with errata) |
+| 09 | [Third-party L-mount](docs/en/09-third-party-lens.md) | Cross-vendor container standard, Sigma vector table |
 
 ---
 
@@ -55,9 +55,12 @@ Full notes in [`docs/README.md`](docs/README.md), read in order:
 
 ```
 .
-├── README.md              this file (English) · README.md is the Chinese version
+├── README.md              this file (English)
+├── README.en.md           English edition · README.md is the Chinese edition
 ├── LICENSE                CC BY-NC 4.0
-├── docs/                  research notes (9 documents)
+├── docs/
+│   ├── zh/                Chinese notes (Chinese filenames, 9 documents)
+│   └── en/                English notes (English filenames, 9 documents)
 ├── tools/                 reusable tools
 │   ├── fwscan.py             firmware reconnaissance: entropy / signature / compression scans
 │   └── pana_unpack.py        UPD image unpacking: partition listing and extraction
@@ -74,7 +77,7 @@ Full notes in [`docs/README.md`](docs/README.md), read in order:
 ```bash
 pip install pycryptodome zstandard
 
-# 1) Obtain official firmware (see docs/01-firmware-acquisition.md)
+# 1) Obtain official firmware (see docs/en/01-firmware-acquisition.md)
 #    Place files in firmware/ (git-ignored, never committed)
 
 # 2) Reconnaissance of a firmware image
@@ -131,7 +134,7 @@ Verification record:
 
 **Therefore: this format does not expose plaintext under read-only analysis.**
 
-See [`docs/03-crypto-analysis.md`](docs/03-crypto-analysis.md).
+See [`docs/en/03-crypto-analysis.md`](docs/en/03-crypto-analysis.md).
 
 ### 3. USB / PTP protocol layer
 
@@ -143,7 +146,7 @@ Three vendor-private opcodes enumerated via
 ```
 
 `0x9102` executes successfully and establishes a transfer context. See
-[`docs/05-mtp-vendor-protocol.md`](docs/05-mtp-vendor-protocol.md).
+[`docs/en/05-mtp-vendor-protocol.md`](docs/en/05-mtp-vendor-protocol.md).
 
 ### 4. Lens firmware (`.plf`)
 
@@ -182,7 +185,7 @@ offset-level intersection ≈ 0, while 512-byte block-level sharing is 71.4%.
 Therefore one **cannot locate the same function across models by file offset**;
 content fingerprints are required.
 
-See [`docs/07-lens-firmware.md`](docs/07-lens-firmware.md).
+See [`docs/en/07-lens-firmware.md`](docs/en/07-lens-firmware.md).
 
 ### 5. Cross-vendor L-mount: `.plf` is an alliance standard
 
@@ -206,7 +209,7 @@ specification, which is what confirms the processor architecture.
 Leica (`SLLens01.plf`) and Samyang (`7801V340.plf`) use the same format;
 **`.plf` is the shared L-Mount Alliance convention**.
 
-See [`docs/09-third-party-lens.md`](docs/09-third-party-lens.md).
+See [`docs/en/09-third-party-lens.md`](docs/en/09-third-party-lens.md).
 
 ---
 

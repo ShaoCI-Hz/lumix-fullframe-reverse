@@ -33,18 +33,18 @@
 
 ## 文档索引
 
-完整笔记见 [`docs/README.md`](docs/README.md),按序阅读:
+完整笔记见 [`docs/zh/README.md`](docs/zh/README.md),按序阅读:
 
 | # | 文档 | 内容 |
 |---|---|---|
-| 01 | [固件获取](docs/01-firmware-acquisition.md) | 官方来源、直链构造、请求要点 |
-| 02 | [固件结构](docs/02-firmware-structure.md) | UPD 容器格式、分区表字段语义 |
-| 03 | [加密分析](docs/03-crypto-analysis.md) | 加密算法判定、签名机制、已排除的路径 |
-| 04 | [USB 接入](docs/04-protocol-usb.md) | WPD/MTP 接入现状与环境配置 |
-| 05 | [厂商私有协议](docs/05-mtp-vendor-protocol.md) | MTP 厂商扩展通道与 opcode 枚举 |
-| 06 | [多机型对比](docs/06-multi-model-comparison.md) | 6 机型横向对比与平台演进 |
-| 07 | [镜头固件](docs/07-lens-firmware.md) | 明文结构、反汇编方法、跨型号指纹聚类(含勘误) |
-| 09 | [第三方 L 卡口](docs/09-third-party-lens.md) | 跨厂商容器标准、Sigma 向量表 |
+| 01 | [固件获取](docs/zh/01-固件获取.md) | 官方来源、直链构造、请求要点 |
+| 02 | [固件结构](docs/zh/02-固件结构.md) | UPD 容器格式、分区表字段语义 |
+| 03 | [加密分析](docs/zh/03-加密分析.md) | 加密算法判定、签名机制、已排除的路径 |
+| 04 | [USB 接入](docs/zh/04-USB接入.md) | WPD/MTP 接入现状与环境配置 |
+| 05 | [厂商私有协议](docs/zh/05-厂商私有协议.md) | MTP 厂商扩展通道与 opcode 枚举 |
+| 06 | [多机型对比](docs/zh/06-多机型对比.md) | 6 机型横向对比与平台演进 |
+| 07 | [镜头固件](docs/zh/07-镜头固件.md) | 明文结构、反汇编方法、跨型号指纹聚类(含勘误) |
+| 09 | [第三方 L 卡口](docs/zh/09-第三方L卡口.md) | 跨厂商容器标准、Sigma 向量表 |
 
 ---
 
@@ -52,9 +52,12 @@
 
 ```
 .
-├── README.md              本文件(中文) · README.en.md 为英文版
+├── README.md              本文件(简体中文)
+├── README.en.md           英文版(English)
 ├── LICENSE                CC BY-NC 4.0
-├── docs/                  研究笔记(9 篇)
+├── docs/
+│   ├── zh/                中文研究笔记(中文文件名,9 篇)
+│   └── en/                英文研究笔记(English filenames, 9 documents)
 ├── tools/                 可复用工具
 │   ├── fwscan.py             固件侦察:熵分析 / 签名扫描 / 压缩流探测
 │   └── pana_unpack.py        UPD 镜像解包:分区列表与提取
@@ -71,7 +74,7 @@
 ```bash
 pip install pycryptodome zstandard
 
-# 1) 获取官方固件(方式见 docs/01-firmware-acquisition.md)
+# 1) 获取官方固件(方式见 docs/zh/01-固件获取.md)
 #    放到 firmware/ 目录(已在 .gitignore 中,不会被提交)
 
 # 2) 侦察固件镜像
@@ -125,7 +128,7 @@ python analysis/lens/download_sigma.py
 
 **因此:该固件格式在只读分析下不暴露明文数据。**
 
-详见 [`docs/03-crypto-analysis.md`](docs/03-crypto-analysis.md)。
+详见 [`docs/zh/03-加密分析.md`](docs/zh/03-加密分析.md)。
 
 ### 三、USB / PTP 协议层
 
@@ -136,7 +139,7 @@ python analysis/lens/download_sigma.py
 ```
 
 `0x9102` 可成功执行并建立传输上下文。详见
-[`docs/05-mtp-vendor-protocol.md`](docs/05-mtp-vendor-protocol.md)。
+[`docs/zh/05-厂商私有协议.md`](docs/zh/05-厂商私有协议.md)。
 
 ### 四、镜头固件(`.plf`)
 
@@ -169,7 +172,7 @@ python analysis/lens/download_sigma.py
 偏移级交集 ≈ 0,但 512 字节块级共享 71.4%。
 因此跨型号**不能用文件偏移**定位同一函数,必须使用内容指纹。
 
-详见 [`docs/07-lens-firmware.md`](docs/07-lens-firmware.md)。
+详见 [`docs/zh/07-镜头固件.md`](docs/zh/07-镜头固件.md)。
 
 ### 五、跨厂商 L 卡口:`.plf` 是联盟标准
 
@@ -192,7 +195,7 @@ https://www.sigma-global.com/en/support/download/<8字符>.plf
 Leica(`SLLens01.plf`)与 Samyang(`7801V340.plf`)同格式,
 **`.plf` 为 L-Mount Alliance 的通用约定**。
 
-详见 [`docs/09-third-party-lens.md`](docs/09-third-party-lens.md)。
+详见 [`docs/zh/09-第三方L卡口.md`](docs/zh/09-第三方L卡口.md)。
 
 ---
 
