@@ -59,7 +59,7 @@ vtable 槽位:`Open`=3, `GetCapabilities`=4, `GetPnPIdentifier`=5。
 ```powershell
 Start-Process powershell -Verb RunAs -ArgumentList '-Command','Start-Service WPDBusEnum'
 # 已验证: WPDBusEnum = Running / Automatic
-```text
+```
 
 ---
 

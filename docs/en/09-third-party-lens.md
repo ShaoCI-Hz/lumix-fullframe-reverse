@@ -261,7 +261,7 @@ python analysis/lens/plf_vendor_compare.py  # cross-vendor header/ID/entropy
 python analysis/lens/plf_deep_compare.py    # FF padding / segment table / code location
 python analysis/lens/plf_checksum.py        # checksum analysis attempts + ID encoding
 python analysis/lens/sigma_vt.py            # ★ vector-table location and base verification
-```text
+```
 
 ---
 

@@ -113,7 +113,7 @@ through the firmware itself.
 python tools/pana_unpack.py firmware/S1H__V28.bin --list
 # or use the comparison script
 python analysis/body/multi_model_diff.py
-```text
+```
 
 Analysis focal points:
 - `+0x0C` model ID (platform code)

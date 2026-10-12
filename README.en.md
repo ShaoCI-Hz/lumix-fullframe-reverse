@@ -89,7 +89,7 @@ python tools/pana_unpack.py firmware/S5m2XV27.bin --extract program --out-dir ou
 
 # 4) Lens firmware: fetch third-party L-mount samples (official direct links)
 python analysis/lens/download_sigma.py
-```text
+```
 
 ---
 
@@ -97,7 +97,7 @@ python analysis/lens/download_sigma.py
 
 ### 1. Body UPD container format
 
-```
+```text
 +0x000  "UPD\0"            magic
 +0x004  block size = 512
 +0x00C  model ID, 16 bytes ("MC8223X" / "MC8223" / "MC801" …)
@@ -111,13 +111,13 @@ Partition table: @0x2DC, 92 bytes each, 58 entries
   entry: name(13B) | address-space tag(3B) | size | offset | flags
          | SHA-256 (32B, plaintext) | nonce (12B)
 Data area: 0x200..EOF; partition offsets are relative to 0x200
-```text
+```
 
 > Note: the model ID at `+0x00C` lies outside the CRC32 coverage.
 
 ### 2. Encryption and integrity
 
-```
+```text
 integrity   = CRC32(0x200..EOF) + per-partition SHA-256
 tamper-proof = ECDSA P-256 signature (+0x220) over the whole image
 confidentiality = strong symmetric encryption, one key per model per partition
@@ -130,7 +130,7 @@ Verification record:
   · no simple key-derivation relation found — 17,496 combinations exhausted
   · identical plaintext with the same nonce and size yields 100% different
     ciphertext across models
-```text
+```
 
 **Therefore: this format does not expose plaintext under read-only analysis.**
 
@@ -141,9 +141,9 @@ See [`docs/en/03-crypto-analysis.md`](docs/en/03-crypto-analysis.md).
 Three vendor-private opcodes enumerated via
 `WPD_CATEGORY_MTP_EXT_VENDOR_OPERATIONS`:
 
-```
-0x9102   0x9103   0x9104
 ```text
+0x9102   0x9103   0x9104
+```
 
 `0x9102` executes successfully and establishes a transfer context. See
 [`docs/en/05-mtp-vendor-protocol.md`](docs/en/05-mtp-vendor-protocol.md).
@@ -153,7 +153,7 @@ Three vendor-private opcodes enumerated via
 Unlike the body firmware, **lens firmware is plaintext** (whole-file entropy
 6.4–7.0, not encrypted) and can be analysed directly:
 
-```
+```text
 container: "LENS-UPDATE-FILE-SOF:" + header fields
            + "LENS-UPDATE-FILE-EOH:" + segment descriptor table
            (EOH = End Of *Header*; block size 512 / 256)
@@ -161,19 +161,19 @@ code:      full ARM Cortex-M Thumb
            6 models -> 2,096 unique function fingerprints, base 0x08000000
 vars:      578 entries (name + type/index) — no address fields,
            pure debug metadata
-```text
+```
 
 **Cross-model fingerprinting** (address-independent: immediates normalised
 away, then SHA-1):
 
-```
+```text
 2,096 unique fingerprints across 6 models
   shared by all 6   :   17   <- compiler runtime (e.g. __aeabi_fdiv)
   shared by 4       :  207
   single model only : 1,540  <- model-specific
   all zoom models   :  245
   zoom-only         :   20   <- candidate business logic (command handlers)
-```text
+```
 
 **Methodological observation**: the code that is most consistent across models
 is compiler-generated library code. Business logic must be filtered by
@@ -185,15 +185,24 @@ offset-level intersection ≈ 0, while 512-byte block-level sharing is 71.4%.
 Therefore one **cannot locate the same function across models by file offset**;
 content fingerprints are required.
 
+**Code distribution** (instruction density per 32 KB, giving a clear three-part
+structure):
+
+| Region | Range | Size | Nature |
+|---|---|---|---|
+| Header | `0x000000` – `0x028000` | ≈160 KB | metadata (container header + segment descriptor table + variable dictionary + strings) |
+| **Main code region** | **`0x028000` – `0x068000`** | **≈256 KB** | **executable code** (density 26.8%–82.8%) |
+| Tail | `0x068000` – `0x079756` | ≈70 KB | data (density 10.8% → 0.0%) |
+
 See [`docs/en/07-lens-firmware.md`](docs/en/07-lens-firmware.md).
 
 ### 5. Cross-vendor L-mount: `.plf` is an alliance standard
 
 Sigma L-mount lens firmware shares the same magic and structure as Panasonic:
 
-```
-https://www.sigma-global.com/en/support/download/<8-char>.plf
 ```text
+https://www.sigma-global.com/en/support/download/<8-char>.plf
+```
 
 | Field | Panasonic | Sigma |
 |---|---|---|
@@ -231,7 +240,7 @@ See [`docs/en/09-third-party-lens.md`](docs/en/09-third-party-lens.md).
   their internals cannot be expanded further
 - Lens-firmware function boundaries depend on the chosen method; the
   precision/recall trade-off of four approaches is quantified in
-  `docs/07` §22–26, and several early conclusions have been corrected
+  `docs/en/07-lens-firmware.md` §22–26, and several early conclusions have been corrected
 - The checksum algorithm for the 4-byte field at `0x40` remains undetermined
   (sum / CRC32 / Adler32 / MD5 / SHA family all tried)
 

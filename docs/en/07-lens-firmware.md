@@ -251,14 +251,14 @@ Disassembly sample (`0x049800`, correctly aligned):
 0x049818  beq    #0x49828
 0x049820  bl     #0x60bd8             ; call
 0x049828  pop    {r0, r1, r4, pc}     ; epilogue
-```text
+```
 
 ### 9.3 Code-segment distribution (by instruction density)
 
-```
+```text
 0x02D000(0.56)  0x031000(0.73)  0x03B000(0.71)  0x040000(0.51)
 0x042000(0.58)  0x045000(0.79)  0x04E000(0.81)  0x057000(0.71)  0x062000(0.79)
-```text
+```
 
 The code is split into several segments interleaved with data segments — a
 typical segmented link layout.
@@ -277,7 +277,7 @@ python analysis/lens/lens_disasm.py         # locate code regions (Thumb feature
 python analysis/lens/lens_disasm2.py        # vector table / code partition / string refs
 python analysis/lens/lens_header_struct.py  # header and segment structure
 # full disassembly output: analysis/lens/lens_disasm_output.txt
-```text
+```
 
 ### 9.6 Conclusion
 
@@ -294,13 +294,13 @@ the most analysable sample of all the camera firmwares.
 
 ### 10.1 Vendor markers inside the container
 
-```
+```text
 0x006D  "PSLFDH"          <- marker after the header fields
 0x0078  "HDFLSPPSLFDI"     <- segment marker 1
 0x009A  "IDFLSPPSLF"       <- segment marker 2 (followed by "00")
 0x00CF  "QIPL"
 0x02D7  "PHUL"
-```text
+```
 
 There are also values such as `0x84: 512` (block size) and `0xB4: 0x2000`; the
 header contains 8 bytes of high-entropy data (`+0x2B..+0x33`), a probable
@@ -318,11 +318,11 @@ loadable image.
 
 ### 10.3 Linear sweep is unreliable (measured)
 
-```
+```text
 BL/BLX instructions     5,688
 targets inside the file 89.1%      <- looks plausible
 targets in a dense code block 25.1%  <- actually very low
-```text
+```
 
 Linear disassembly from an arbitrary offset produces many false positives (data
 segments misread as instructions) — for example the "disassembly" at `0x00FD00`
@@ -336,7 +336,7 @@ trustworthy function-level disassembly can be obtained.**
 ```bash
 python analysis/lens/lens_segtable.py   # segment markers / vector table / boundaries
 python analysis/lens/lens_bl_verify.py  # BL target distribution and load-address check
-```text
+```
 
 ### 10.5 Next steps
 
@@ -368,14 +368,14 @@ Linear sweep is unreliable (data regions misread as instructions), so instead:
 
 ### 11.2 Measured results
 
-```
+```text
 prologue seeds              1,147
   fully disassemblable        694  (60.2%)
 BL targets (call sites)     2,532
   disassembly success rate   81.5%   <- higher than prologue seeds
 high-confidence entries       101   <- BL target ∩ prologue (double-validated)
 trusted-function coverage    31.2% of file (155,366 / 497,494 bytes)
-```text
+```
 
 ### 11.3 ⚠️ Retracted: "load address = file offset" (**not proven**)
 
@@ -389,11 +389,11 @@ trusted-function coverage    31.2% of file (155,366 / 497,494 bytes)
 
 1. **The union of "function intervals" covers 98.59% of the file**
 
-   ```
+```text
    file size          497,494 bytes
    interval union     490,476 bytes = 98.59%
    interval union = [0x001B6A, 0x079756)   <- spans from the first seed to EOF
-```text
+```
 
    Because the intervals are built as `[(se[i], se[i+1]) ... (se[-1], n)]`,
    **any target above 0x001B6A "falls inside an interval"** — the test has almost
@@ -403,11 +403,11 @@ trusted-function coverage    31.2% of file (155,366 / 497,494 bytes)
 
    The collection code used `ins.mnemonic in ('bl', 'b', 'blx')`, **including `b`**:
 
-   ```
+```text
    pure BL/BLX targets : 5,688
    plain B targets     : 5,116   <- 47%, should not count as "function calls"
    total               : 10,804
-```text
+```
 
    `B` is an intra-function jump: **77% of B targets are within 0x400 of their
    interval start**, so including them necessarily inflates the hit rate — a
@@ -440,12 +440,12 @@ downgraded to "a base address has to be tried in Ghidra first".**
 
 ### 11.4 Call-chain verification (self-consistent)
 
-```
+```text
 0x02C2D0  push {r4,r5,r6,lr}     <- prologue
 0x02C2DA  bl   #0x2C3CC          <- call
 0x02C3CC  push {r4,lr}           <- indeed a prologue ✓
 0x02C3D2  bl   #0x2C388          <- another call
-```text
+```
 
 Most-called functions (core utilities):
 
@@ -487,7 +487,7 @@ python analysis/lens/lens_base.py       # ⚠️ its "function interval" test is
 python analysis/lens/lens_entry2.py     # target-entry quality comparison
 python analysis/lens/lens_final.py      # high-confidence entry list
 python analysis/lens/verify_claims.py   # ★ reproducible falsification of the claims above
-```text
+```
 
 ### 11.7 Next steps
 
@@ -512,17 +512,17 @@ revised**:
 005420  74 00 00 00 00 00 00 00 ...                        |t...............|
 
 0x5413  "OISPwAdjAdjSet"
-```text
+```
 
 **The names are consecutive null-terminated strings**, each preceded by a small
 structure:
 
-```
+```text
 before OisDVL:  00 00 00 00 | 01 06 | 00 00
 before IrsAct:  00 00 00 00 | 05 01 | 00 00
 before FocDrv:  00 00 00 00 | 05 03 | 00 00
                              ↑type  ↑index/number
-```text
+```
 
 ### 12.2 Basis for the judgement: the table **contains no address field**
 
@@ -539,14 +539,14 @@ likely metadata retained from the debug build.
 
 Variable names appear in module groups, directly exposing the subsystem split:
 
-```
+```text
 OIS group     OISPwAdjAdjSet / OisDVL / OisFcharActSet / OISAngleData
 Iris group    IrsSetCrVel2x16 / IrsAct / IrsJmp / IrsPos / IrsDrvStep
 Focus group   FocDrv / FocJmp / FocPos / Dist5mm / TrkDistance / AFAdjData
 Zoom group    ZmPosAD / ZmHysAD2ZomAD3 / ZmPos256...
 Drive group   MtrMode / DrvActGr / DrvVel / Current / Vel2x16
 Mode group    DbgMode / DrvMode / MoveMode / RestMode / TarMode
-```text
+```
 
 **These names can be used to "tag" functions** — a function that frequently reads
 and writes `Irs*` variables is an iris-control function.
@@ -564,7 +564,7 @@ Since the variable table has no addresses, an **indirect mapping** is used:
 ```bash
 python analysis/lens/lens_symtable.py   # symbol-region structure analysis
 python analysis/lens/lens_symbols_all.txt  # per-symbol file offsets (published)
-```text
+```
 
 ### 12.5 Current progress
 
@@ -588,10 +588,10 @@ valuable than expected**.
 
 ### 13.1 Variable names have no code references at all
 
-```
+```text
 variable names (0x4000-0x9000 region)   388
 referenced from literal pools              1   <- the single hit is a string-fragment false positive
-```text
+```
 
 ### 13.2 A methodological error was corrected
 
@@ -602,19 +602,19 @@ file**.
 
 Re-testing with the RAM address range:
 
-```
+```text
 top 4 bytes after a name: 0x00000000 x106, the rest are string fragments — no address field
 top 4 bytes before a name: 0x00000000 x78, the rest are string fragments — no address field
-```text
+```
 
 ### 13.3 But the code does reference RAM heavily
 
-```
+```text
 whole-file RAM address references (aggregated per 1KB block): 166 blocks
   0x20002000 x458   0x20004400 x273   0x2000D000 x189
   0x20000000 x177   0x2001D000 x170   0x2000F800 x122
   ...
-```text
+```
 
 **The code only operates on RAM addresses and never references the variable-name
 strings.**
@@ -627,10 +627,10 @@ is used by a debug interface that accesses variables by name**.
 
 Supporting evidence (the table indeed contains debug-class variables):
 
-```
+```text
 DbgMode        DrvMode       LogData1..8       ErrLSB
 LockErr        ChkGyro       Adj_Pos           AvMaxVlF
-```text
+```
 
 **This is a meaningful finding for the project:**
 
@@ -648,7 +648,7 @@ LockErr        ChkGyro       Adj_Pos           AvMaxVlF
 python analysis/lens/lens_ramaddr.py   # address-field detection + RAM reference statistics
 python analysis/lens/lens_xref.py      # variable → reference → function mapping attempt
 # output: analysis/lens/lens_var_xref.txt
-```text
+```
 
 ### 13.6 Next steps (direction is clear)
 
@@ -702,7 +702,7 @@ which **both** supports "the table is host-side/offline metadata"
 python analysis/lens/lens_ramaddr.py   # address-field detection + RAM reference statistics
 python analysis/lens/lens_xref.py      # variable → reference → function mapping attempt
 python analysis/lens/verify_claims.py  # ★ reproducible falsification of the §11.3 conclusion
-```text
+```
 
 ---
 
@@ -713,7 +713,7 @@ rather than executable code.
 
 ### 14.1 Header layout
 
-```
+```text
 0x0000  "LENS-UPDATE-FILE-SOF:"              (21 B)
 0x0015  header fields 00 02 | 07 e9 | 03 07 00 01 | 00 03 ...
 0x0058  "LENS-UPDATE-FILE-EOH:"              (21 B) <- End Of HEADER
@@ -725,7 +725,7 @@ rather than executable code.
 0x00B4  0x00002000 = 8192
 0x00B8  0x00000200 = 512
 0x00B0+ segment/block descriptor table starts
-```text
+```
 
 ### 14.2 Basis for judging it a "table" rather than "code"
 
@@ -733,19 +733,19 @@ rather than executable code.
 decoding at several alignments from `0x00F0` yields strings of meaningless
 instructions:
 
-```
+```text
 0x00F0  4811  asrs r0, r1, #5
 0x00F2  4901  lsls r1, r1, #5
 0x00F4  540c  lsrs r4, r2, #0x11
 0x00F8  4901  lsls r1, r1, #5
 0x010A  70be  bkpt  #0x70        <- a hallmark of "data being read as code"
-```text
+```
 
 **(b) The `00 00 70 XX` pattern recurs at a 4-byte stride:**
 
-```
-stride sequence: [4, 4, 4, 4, 14, 6, 4, 4, 4, 4, 10, 4]
 ```text
+stride sequence: [4, 4, 4, 4, 14, 6, 4, 4, 4, 4, 10, 4]
+```
 
 Read as u16 LE from `0x10E`, this yields addresses that are **strictly increasing
 and all inside the file**:
@@ -759,21 +759,21 @@ and all inside the file**:
 
 **(c) `0xB0..0x400` also contains addresses near the end of the file:**
 
-```
+```text
 0x0128  0x007070 =  28,784
 0x014C  0x057270 = 356,976
 0x0150  0x05EC70 = 388,208
 0x016C  0x073270 = 471,664     <- file size 0x79716 = 497,494
 0x029C  0x025E70 = 155,248
-```text
+```
 
 ### 14.3 Meaning of the two values 512 / 8192
 
-```
+```text
 0x0084 = 512    <- matches the "block size" of §9.1
 0x00B4 = 8192
 0x00B8 = 512
-```text
+```
 
 **512 recurs**, the same as the UPD container (body firmware) block size —
 showing that Panasonic's firmware containers **share one block-layout convention
@@ -794,7 +794,7 @@ still require:
 ```bash
 python analysis/lens/plf_struct.py    # header fields / cross-sample comparison / pair search
 python analysis/lens/plf_head2.py     # header disassembly test + 0x70 pattern analysis
-```text
+```
 
 **The value of this section**: it settles the open question "is the header code
 or a table?" in favour of **a table**, thereby **narrowing the segment-table
@@ -812,18 +812,18 @@ boundaries — **neither succeeded**, but both negative results are worth record
 Three differently-sized samples were compared to find header fields that vary
 with file size:
 
-```
+```text
      off    4001V020(497,494)  4002V020(673,252)  4006V020(452,161)
   0x0018          459,753           1,379,305            265,449
   0x0084              512                 512                256
   0x00B4            8,192               8,192             40,960
-```text
+```
 
 **A striking coincidence:**
 
-```
-4001:  37,741 + 459,753 = 497,494 = file size  ✓
 ```text
+4001:  37,741 + 459,753 = 497,494 = file size  ✓
+```
 
 **But 4002 immediately refutes it**: `0x18 = 1,379,305 > 673,252 = file size` ✗
 
@@ -835,13 +835,13 @@ coincidence. Also note `0x84` is **256**, not 512, on 4006 — the block size is
 
 Computing entropy per 4 KB block **does show a clear stratification**:
 
-```
+```text
 0x000000 - 0x008000   H = 3.15 - 5.04    <- low entropy
 0x009000 onward        H = 6.28 - 6.89    <- medium-high, stable
 
 and the three samples agree closely over 0x2000-0x8000:
   3.79, 4.06, 3.93, 3.33, 3.15   <- fixed header
-```text
+```
 
 At first this looks like a clean "header + data region" split.
 **But content inspection refutes it:**
@@ -882,7 +882,7 @@ features** (valid-Thumb decode rate, prologue density, strings).
 python analysis/lens/plf_segtable.py    # cross-sample header field comparison
 python analysis/lens/plf_entropy.py     # per-block entropy curve + data-start inference
 python analysis/lens/plf_data_start.py  # content inspection (refutes the entropy conclusion)
-```text
+```
 
 ### 15.5 Unsolved / next steps
 
@@ -910,9 +910,9 @@ The segment-table item structure **remains unsolved**. Already ruled out:
 
 Six lens firmwares were compared by the **file offsets of their function prologues**:
 
-```
-prologue counts: 4001:1149  4002:1380  4003:849  4006:952  400C:529  400E:543
 ```text
+prologue counts: 4001:1149  4002:1380  4003:849  4006:952  400C:529  400E:543
+```
 
 | Level of comparison | Result |
 |---|---|
@@ -935,14 +935,14 @@ strings).
 Comparing each sample's **set of variable names** (strict match: ≥6 characters,
 mixed case):
 
-```
+```text
 4001 S-R24105 (zoom)    332
 4002 S-R70200 (zoom)    381
 4006 S-E2470  (zoom)    478
 4003 S-X50    (prime)    30
 400C S-S85    (prime)    20
 400E S-S50    (prime)    23
-```text
+```
 
 | Group | Intersection | Jaccard |
 |---|---|---|
@@ -958,7 +958,7 @@ mixed case):
 
 ### 16.3 Module composition of the shared zoom control stack (291 names)
 
-```
+```text
 Prefix     Count  Meaning
 Irs         10    iris
 Chk         10    self-test / verification
@@ -975,16 +975,16 @@ Ois          2    (a second naming style)
 Tar          2    target
 Log/Dbg/Rest/Mtr  1 each
 (other)    208    unclassified (mostly internal abbreviations)
-```text
+```
 
 **Representative variable names** (all readable plaintext):
 
-```
+```text
 AFAdjData        AllAdjAdrsData    AdjStat     AdjSpd
 AtnTracking      AvMaxVlF          AveSmpC     BAmpGain
 ChkGyro          ChkOISAj          ChkPos      ChkLin
 BtnTrkFStopper   AmpShiftPhShift   Apvel2Imode ...
-```text
+```
 
 **This corroborates the "329 shared symbols" of §7** — this round used a
 **stricter matching rule** (≥6 characters, mixed case) and got **291**; the lower
@@ -996,7 +996,7 @@ same: the zoom lenses share one unified control-algorithm stack**.
 ```bash
 python analysis/lens/lens_cross.py       # cross-sample prologue/block/variable-name sharing
 python analysis/lens/lens_zoom_prime.py  # zoom vs prime group comparison
-```text
+```
 
 ### 16.5 Methodology correction (important)
 
@@ -1029,14 +1029,14 @@ different offsets — produce the **same fingerprint**.
 
 ### 17.2 Result: the zoom group shares 245 functions
 
-```
+```text
 4001: 646 functions / 615 unique fingerprints
 4002: 691 functions / 660 unique fingerprints
 4006: 603 functions / 572 unique fingerprints
 4003: 669 functions / 637 unique fingerprints
 
 fingerprints common to all three zoom samples: 245
-```text
+```
 
 **The same fingerprint appears at completely different offsets across the three
 models, with strictly identical instruction counts:**
@@ -1058,18 +1058,18 @@ considered impossible.
 §16.2 concluded from variable names that the two groups "share almost nothing
 (3 entries, all junk strings)". **Code fingerprints give a different answer:**
 
-```
+```text
 zoom union: 1,225 fingerprints
 prime union:  637 fingerprints
 intersection: 358   -> 29.2% cross-family sharing
-```text
+```
 
 Cross sample (`4003` is a prime model other than the S-X50):
 
-```
+```text
 0131b7e9776bdda5   4001:0x030C80  4002:0x034AD8  4006:0x02035C  4003:0x0052A0
 082e9cb9ef4678dc   4001:0x02E7F4  4002:0x03264C  4006:0x01DC20  4003:0x002E14
-```text
+```
 
 **The corrected picture:**
 
@@ -1084,14 +1084,14 @@ than being "two unrelated firmwares".
 
 ### 17.4 Size distribution of shared functions
 
-```
+```text
  0- 19 instructions: 126
 20- 39 instructions:  65
 40- 59 instructions:  23
 60- 79 instructions:  21
 80- 99 instructions:   6
 100+ instructions :    4 (longest 180+)
-```text
+```
 
 **Sharing is concentrated in small and medium functions** (utilities, protocol,
 math routines), while large functions (most likely lens-specific algorithms) do
@@ -1110,7 +1110,7 @@ not cross models — as expected.
 
 ```bash
 python analysis/lens/lens_fingerprint.py   # address-independent fingerprints + cross-model matching
-```text
+```
 
 ### 17.7 Next steps
 
@@ -1129,7 +1129,7 @@ All three items from §17.7 are complete.
 
 ### 18.1 Clustering overview (six models)
 
-```
+```text
 4001: 618 unique fingerprints   4002: 665   4003: 638
 4006: 572                       400C: 382   400E: 380
 total unique fingerprints: 2,096
@@ -1141,15 +1141,15 @@ distribution by number of models sharing:
   3 models     :  103
   2 models     :  223
   single model : 1,540     <- model-specific logic
-```text
+```
 
 Zoom/prime divergence:
 
-```
+```text
 zoom group (4001/4002/4006) all have : 245
 zoom-only, absent from all primes    :  20   ★ candidate business logic
 prime group (4003/400C/400E) all have:  22
-```text
+```
 
 ### 18.2 ★ Important finding: what "all 6 models share" is the compiler runtime library
 
@@ -1166,7 +1166,7 @@ The largest fully-shared function `FN0001` (`5ba6c9099252ca2c`, 93 instructions)
 0x0328D0  cmp   r4, r5               ; compare exponents
 0x0328FA  udiv  r6, r1, r3           ; division
 0x032902  umull r7, r5, r2, r6
-```text
+```
 
 **This is `__aeabi_fdiv` (single-precision software float division)** — **a routine
 from the ARM EABI compiler runtime library**, not lens business logic.
@@ -1229,7 +1229,7 @@ typical command handler:**
 0x03E42A  adds.w ip, ip, #1
 0x03E432  cmp.w  ip, #3                       ; ★ ring counter
 0x03E438  movs.w ip, #0                       ; wrap around
-```text
+```
 
 **Recognisable structures:**
 
@@ -1248,16 +1248,16 @@ The second one (`8c3b7813e9f73380` @0x03E244) is a **parameter setter**:
 0x03E24E  uxtb   r0, r0          ; parameter as a byte
 0x03E254  sxtb   r1, r1          ; parameter as a signed byte
 0x03E25A  str    r1, [r0]        ; write to the RAM variable
-```text
+```
 
 ### 18.4 Deliverables
 
-```
+```text
 analysis/lens/lens_function_ids.txt            index of the 17 functions shared by all 6 models
 analysis/lens/lens_fingerprint_report.txt      full clustering report (classification + runtime-library list)
 analysis/lens/lens_shared_biggest.asm          full disassembly of the largest shared function
 analysis/lens/lens_zoom_only_funcs.asm         disassembly of the 20 zoom-only functions (★ business logic)
-```text
+```
 
 ### 18.5 Reproduction
 
@@ -1265,7 +1265,7 @@ analysis/lens/lens_zoom_only_funcs.asm         disassembly of the 20 zoom-only f
 python analysis/lens/lens_cluster.py       # 6-model clustering + index + largest-function disassembly
 python analysis/lens/lens_classify.py      # runtime-library identification + zoom-only extraction
 python analysis/lens/lens_zoomonly_asm.py  # zoom-only function disassembly
-```text
+```
 
 ### 18.6 Conclusions and methodology takeaway
 
@@ -1291,7 +1291,7 @@ python analysis/lens/lens_deep.py        # symbol table and code location
 python analysis/lens/lens_diff.py        # multi-lens differential
 python analysis/lens/lens_common.py      # shared-symbol classification
 python analysis/lens/lens_sym_dump.py    # generate the full symbol library
-```text
+```
 
 ---
 
@@ -1322,12 +1322,12 @@ angle that this firmware is a Cortex-M program** (consistent with §9).
 The Flash-segment addresses range over `0x08000000 .. 0x080FFFF1`.
 **Checking where they land after subtracting the base:**
 
-```
+```text
 0x08000000 -> offset 0x000000: 4c 45 4e 53 2d 55 50 44 41 54 45 2d 46 49 4c 45
                               = "LENS-UPDATE-FILE"   <- exactly the file start!
 0x08000019 -> offset 0x000019: 03 07 00 01 00 03 ...   <- header fields
 0x0800001A -> offset 0x00001A: 07 00 01 00 03 00 ...   <- header fields
-```text
+```
 
 **`0x08000000` points exactly at byte 0 of the file, the `"LENS-UPDATE-FILE"`
 string** — that is not a coincidence.
@@ -1337,7 +1337,7 @@ string** — that is not a coincidence.
 ```asm
 0x0277D4  ldr  r1, [pc, #0x200]        ; loads 0x08000000
           literal @0x0279D8 = 0x08000000
-```text
+```
 
 In total **585 `LDR literal` instructions load a Flash-segment address** (the
 classic "fetch a data/table address" pattern).
@@ -1354,11 +1354,11 @@ That is, the `.plf` code/data runs on the device in the Flash space starting at
 
 ### 19.4 Address bit distribution: mostly data pointers
 
-```
+```text
 1,852 distinct Flash-segment address values:
   even (bit0=0, data pointers)       : 1,585   <- majority
   odd  (bit0=1, Thumb code pointers) :   267
-```text
+```
 
 **Predominantly data pointers** — meaning the vast majority of these references
 point at **constant tables / lookup tables / strings**. A function-pointer table
@@ -1369,11 +1369,11 @@ table was found**.
 
 Some addresses exceed the file size once the base is subtracted:
 
-```
+```text
 0x080F7C48 -> offset 0x0F7C48   (file is only 0x79756)
 0x080FF002 -> offset 0x0FF002
 0x080FFFF1 -> offset 0x0FFFF1
-```text
+```
 
 **The most likely explanation: `.plf` does not contain a complete Flash image**,
 only the parts that need updating; the rest of the runtime Flash (initialisation
@@ -1398,7 +1398,7 @@ consistent with "the file covers only the low part of Flash".
 ```bash
 python analysis/lens/peripheral_scan.py  # address-segment statistics + peripheral/SCS detail
 python analysis/lens/verify_base.py      # base 0x08000000 verification + bit distribution
-```text
+```
 
 ### 19.8 Methodology takeaway (compared with the two earlier failures)
 
@@ -1429,17 +1429,17 @@ conditions**, so the failed attempt of §10.2 was redone.
 
 A real Cortex-M vector table's first two words must be:
 
-```
+```text
 word[0] = initial stack pointer  -> must fall in the SRAM range 0x20000000-0x2003FFFF
 word[1] = reset vector           -> must fall in the Flash range, with bit0 = 1 (Thumb state)
-```text
+```
 
 ### 20.2 Result: zero hits
 
-```
+```text
 strict (word0 in SRAM, word1 in Flash|1, plus the next 7/8 entries also sane): 0
 loose  (only requiring word0 in SRAM and word1 in Flash|1)                   : 0
-```text
+```
 
 **The file contains no byte combination of "an SRAM address immediately followed
 by a Flash|1 address" at all.**
@@ -1462,23 +1462,23 @@ at the time):
 
 **Therefore** the lens MCU's Flash layout should be:
 
-```
+```text
 0x08000000  ┌─────────────────────────────┐
             │ ...(not in .plf; vector table?) │  <- factory boot/base firmware
             ├─────────────────────────────┤
             │ .plf-covered region (SOF header + code) │  <- this file
             └─────────────────────────────┘
-```text
+```
 
 ### 20.4 SRAM reference distribution (a side result)
 
-```
+```text
 total SRAM-segment references: 3,572
   0x20000000 block: 2,180
   0x20010000 block:   786
   0x20020000 block:   400
   0x20030000 block:   206
-```text
+```
 
 **SRAM use spans four 64 KB blocks (0x20000000-0x2003FFFF ≈ 256 KB)** — consistent
 with the 166 distinct 1 KB blocks of §13.3, indicating the MCU's SRAM is on the
@@ -1498,7 +1498,7 @@ order of 256 KB.
 
 ```bash
 python analysis/lens/vector_table.py   # strict/loose vector-table search + SRAM distribution
-```text
+```
 
 ---
 
@@ -1509,10 +1509,10 @@ peripherals does the lens MCU have".
 
 ### 21.1 Peripheral register inventory
 
-```
+```text
 0x40000000 segment: 250 distinct registers, 572 references
 256B peripheral blocks: 198
-```text
+```
 
 **Most-referenced registers:**
 
@@ -1530,11 +1530,11 @@ peripherals does the lens MCU have".
 
 **Most-referenced peripheral blocks (256B):**
 
-```
+```text
 0x40000000 x54    0x40011700 x48    0x4000F500 x27
 0x40017000 x24    0x40078000 x20    0x4000F000 x20
 0x40040000 x16    0x4000F900 x15    0x4001EB00 x15
-```text
+```
 
 > **Note**: which peripheral (SPI / UART / I²C / GPIO / Timer) each address belongs
 > to **cannot be determined from the address alone** — that needs the MCU's
@@ -1545,7 +1545,7 @@ peripherals does the lens MCU have".
 
 Using `LDR literal` pools to build a "function → referenced addresses" mapping gives:
 
-```
+```text
 functions with address references: 130
 referenced addresses            : 148
 
@@ -1554,7 +1554,7 @@ most-shared addresses (top 15): all within 0x0801A8xx - 0x0801AAxx
   0x0801A823 by 24
   0x0801A817 by 23
   ...
-```text
+```
 
 **On the surface this looks like "global data shared by 25 functions", but it is
 more likely a statistical artifact**, because:
@@ -1583,7 +1583,7 @@ standard: BL/BLX targets only, landing in a dense code block) — still **open**
 
 ```bash
 python analysis/lens/periph_map.py   # peripheral register statistics + function↔address graph
-```text
+```
 
 ### 21.4 Round summary
 
@@ -1617,14 +1617,14 @@ A function entry must **both**:
 
 ### 22.2 ★ Result: 915 → 133
 
-```
+```text
 all distinct BL/BLX targets        : 2,848
 of which are themselves prologues  :   133   (strict)
 
 versus the loose seeds of §11.5 (0xB5xx predicate only): 915
 -> under strict validation only 133 remain = 14.5%
 -> i.e. 85.5% of the loose seeds were data coincidences
-```text
+```
 
 **This quantifies the doubt the independent review agent raised in §11.5**
 ("the predicate is ~1/256, so chance expectation is ~970 hits, close to the
@@ -1635,11 +1635,11 @@ measured 1,147").
 §11.5 had been criticised as "not recursive descent" (it only collected targets
 without descending). This round implements real iteration:
 
-```
+```text
 round 1: +12 new (total 133)
 round 2:  +0     (total 133)
 -> immediate convergence
-```text
+```
 
 **Convergence matters**: the worklist closed completely after adding 12, showing
 the **internal call relations of these 133 functions are self-consistent** — they
@@ -1648,10 +1648,10 @@ form a **closed function cluster**. 121 / 133 = 91.0% disassemble fully to a
 
 ### 22.4 ★ Call-graph self-consistency: 2.3× improvement
 
-```
+```text
 strict set (BL target ∩ prologue): BL targets hitting a function entry = 35 / 504 = 6.9%
 loose set (prologue predicate only):                                    = 99 / 3308 = 3.0%
-```text
+```
 
 **The strict standard improves the hit rate 2.3×**, validating the standard.
 
@@ -1685,12 +1685,12 @@ loose seeds is untrustworthy**.
 
 ### 22.6 Coverage and size
 
-```
+```text
 strict-set functions : 133
 instructions covered : 11,255
 mean function length : 84.6
 median length        : 28
-```text
+```
 
 The median (28) is far below the mean (84.6) → a **long-tailed distribution**
 (a few large functions plus many small ones).
@@ -1716,7 +1716,7 @@ the **245 / 358 shared-function conclusions of §17-18 still hold**.
 ```bash
 python analysis/lens/strict_recursive.py   # strict seeds + real recursive descent + consistency checks
 # output: analysis/lens/lens_strict_funcs.txt (the 133 functions)
-```text
+```
 
 ### 22.9 Next step (and why handing off to Ghidra is advisable)
 
@@ -1758,14 +1758,14 @@ descent.
 
 ### 23.2 ★ Results
 
-```
+```text
 iterations          : 1,861,014
 reachable code      : 71,507 instructions
 function entries    : 133  ->  2,170   (16x)
 control-flow edges  : call 98,360  +  branch 192,725  =  291,085
 
 coverage            : 182,184 / 497,494 bytes = 36.6%
-```text
+```
 
 **Comparison with the §22 strict set:**
 
@@ -1780,10 +1780,10 @@ test", not the reachability approach itself.
 
 ### 23.3 Call-graph self-consistency 98.9% — but honestly flagged as partly tautological
 
-```
+```text
 BL targets hitting a function entry: 13,280 / 13,428 = 98.9%
 (compared with: §22 strict 6.9%, §11.5 loose 3.0%)
-```text
+```
 
 > ⚠️ **Honest caveat**: this 98.9% is **partly tautological**.
 > Because this round **defines** "every BL target" as a function entry,
@@ -1796,12 +1796,12 @@ seeds — that part **does not depend on the definition** and is real progress.
 
 ### 23.4 Function-size statistics are unreliable (cause identified)
 
-```
+```text
 "longest function" output:
   0x041108  2469 instructions
   0x041118  2463 instructions
   0x04123C  2352 instructions
-```text
+```
 
 **A 2,469-instruction single function is implausible** — the cause: this round
 also queues **`B`/`Bcc` branch targets for scanning**, so when a branch jumps far
@@ -1830,7 +1830,7 @@ boundaries** and the "size" is overestimated.
 ```bash
 python analysis/lens/reachability.py   # reachability descent + coverage + control-flow stats
 # output: analysis/lens/lens_reachability.txt (2,170 entries)
-```text
+```
 
 ### 23.7 Next steps (three independent directions)
 
@@ -1856,14 +1856,14 @@ trade-off** of three methods.
 Branch following limited to **±8 KB from the entry**, with **branch targets not
 starting a new function**:
 
-```
+```text
 functions (from the 133 strict seeds) : 133
 size median                           : 28 instructions
 size mean                             : 148.3
 size max                              : 3,255 instructions   <- still implausible
 unique coverage                       : 14,644 instructions = 5.9%
 call-graph self-consistency           : 90/1747 = 5.2%
-```text
+```
 
 **Boundary precision improves** (median 28, matching §22), but **coverage drops
 to 5.9%** — because it starts only from the 133 seeds and does no global
@@ -1871,7 +1871,7 @@ reachability.
 
 ### 24.2 Correction 2: hybrid (all BL targets as entries + intra-function scan)
 
-```
+```text
 entry candidates (all BL targets)     : 2,848
 valid functions (≥3 instructions)     : 2,726
 unique coverage                       : 67,888 instructions = 27.3% of file
@@ -1880,7 +1880,7 @@ size mean                             : 189.1
 size max                              : 2,469 instructions
 ★ overlap rate                        : 50,814 / 67,888 = 74.8%
 call-graph self-consistency           : 34,105/34,941 = 97.6%
-```text
+```
 
 **★ The 74.8% overlap rate is a fatal signal** — it shows the **entry set is of
 poor quality**: of the 2,848 BL targets obtained by whole-file scanning, **only
@@ -1936,7 +1936,7 @@ The whole-file scan of §24.2 introduces contamination.
 python analysis/lens/fixed_bounds.py   # correction 1: intra-function scan (±8KB)
 python analysis/lens/hybrid.py         # correction 2: all BL targets as entries
 # output: analysis/lens/lens_fixed_bounds.txt, analysis/lens/lens_hybrid_funcs.txt
-```text
+```
 
 ### 24.6 Cumulative status (§19-24)
 
@@ -1973,11 +1973,11 @@ elif (m == 'pop' and 'pc' in op) or (m == 'bx' and 'lr' in op):
         progressed = True
     else:                        # worklist empty -> genuine function end
         steps = MAXF
-```text
+```
 
 ### 25.2 ★ Result: clearly the best precision
 
-```
+```text
 functions          : 133
 code addresses     : 10,203
 size median        : 28 instructions
@@ -1987,7 +1987,7 @@ size mean          : 84.6
 
 BL hitting a prologue entry :  50/790 = 6.3%
 BL target landing in code   : 135/790 = 17.1%
-```text
+```
 
 **Both "max function 981 instructions" and "overlap 10.3%" are the best of the
 four experiments** — showing that **return-stack boundaries plus the prologue
@@ -1995,11 +1995,11 @@ guard** do produce a clean function partition.
 
 ### 25.3 ★ But the lowest recall: converges immediately after 18
 
-```
+```text
 round 1: +18 pending (total 133)
 round 2:  +0         (total 133)
 -> immediate convergence
-```text
+```
 
 **The reason for convergence is a highly valuable fact:**
 
@@ -2053,7 +2053,7 @@ Ghidra/IDA stack analyser does.
 ```bash
 python analysis/lens/correct_method.py   # collect within the code flow + return-stack boundaries
 # output: analysis/lens/lens_correct_method.txt
-```text
+```
 
 ### 25.7 Complete methodology summary for §19-25
 
@@ -2080,30 +2080,30 @@ BL". **This round uses a completely independent anchor: the function-end instruc
 `bx lr` (`70 47`) and `pop {..,pc}` (`0xBDxx` / `0xe8bd..`) are **hard evidence of a
 function end**:
 
-```
+```text
 whole-file candidate end points: 2,362
   verified as real end instructions: 2,207
     bx lr        840
     pop{..,pc} 1,170
     popw{..,pc}  352
-```text
+```
 
 **Segmentation rule**: between two adjacent end points, if the region **decodes
 continuously from start to end**, it is **a stretch of executable code** —
 **depending on neither seeds nor the prologue test at all**.
 
-```
+```text
 regions verified: 1,620
 regions failed (cross data / misaligned): 583
 coverage: 82,267 instructions = 33.1% of file
-```text
+```
 
 ### 26.2 ★ Leaf-function evidence: 73.4% of region starts have no prologue
 
-```
+```text
 region starts with a prologue   :   431
 region starts without a prologue: 1,189  (73.4%)
-```text
+```
 
 **This provides direct structural evidence for the inference of §25.3**: the
 number of **leaf functions** missed by the prologue test is **nearly 3×** the
@@ -2123,7 +2123,7 @@ function entry?" but only "is this a verifiable stretch of code?".
 
 ### 26.4 ★★ Merge: the largest trustworthy code region, 34.7%
 
-```
+```text
 A reachability (strict version) : 18,501 instructions =  7.4%
 B endpoint segmentation        : 82,349 instructions = 33.1%
 A ∩ B                          : 14,563
@@ -2131,7 +2131,7 @@ A ∪ B                          : 86,287 instructions = 34.7%
 Jaccard                        : 0.169        <- low overlap, the two complement each other
 A only                         :  3,938
 B only                         : 67,786
-```text
+```
 
 > **Note**: in reproducing method A this round the prologue constraint was added
 > back to BL targets (unlike §23), hence 18,501 rather than §23's 71,507. This was
@@ -2149,7 +2149,7 @@ regions**:
 
 Code share per 32 KB:
 
-```
+```text
 offset        code instr/total   share
 0x000000      81/16384      0.5%
 0x008000     501/16384      3.1%
@@ -2167,7 +2167,7 @@ offset        code instr/total   share
 0x068000    1769/16384     10.8%  ####
 0x070000     179/16384      1.1%
 0x078000       0/2987       0.0%
-```text
+```
 
 **The file's three-part structure is thereby established:**
 
@@ -2203,7 +2203,7 @@ the true set of entries under a criterion with no caller requirement.
 python analysis/lens/endpoint_segments.py  # endpoint segmentation
 python analysis/lens/merge_code.py         # merge + code-region distribution map
 # output: analysis/lens/lens_endpoint_segments.txt, analysis/lens/lens_merged_code.txt
-```text
+```
 
 ### 26.8 §19-26 summary: method matrix
 

@@ -106,4 +106,4 @@ Third-party L-mount lens firmware can be downloaded directly (official links):
 
 ```bash
 python ../../analysis/lens/download_sigma.py
-```text
+```

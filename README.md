@@ -86,7 +86,7 @@ python tools/pana_unpack.py firmware/S5m2XV27.bin --extract program --out-dir ou
 
 # 4) 镜头固件:下载第三方 L 卡口样本(官方直链)
 python analysis/lens/download_sigma.py
-```text
+```
 
 ---
 
@@ -94,7 +94,7 @@ python analysis/lens/download_sigma.py
 
 ### 一、机身 UPD 容器格式
 
-```
+```text
 +0x000  "UPD\0"            magic
 +0x004  block size = 512
 +0x00C  机型 ID  16 字节("MC8223X" / "MC8223" / "MC801" …)
@@ -108,13 +108,13 @@ python analysis/lens/download_sigma.py
   项内: name(13B) | 地址空间标记(3B) | size | offset | flags
         | SHA-256(32B,明文) | nonce(12B)
 数据区: 0x200..EOF,分区偏移为相对 0x200 的文件偏移
-```text
+```
 
 > **注意**:机型 ID 位于 `+0x00C`,处于 CRC32 覆盖范围之外。
 
 ### 二、加密与完整性
 
-```
+```text
 完整性 = CRC32(0x200..EOF) + SHA-256(逐分区)
 防篡改 = ECDSA P-256 签名(+0x220),覆盖整个镜像
 机密性 = 强对称加密,每机型·每分区独立密钥
@@ -124,7 +124,7 @@ python analysis/lens/download_sigma.py
   · 明文仅存在于元数据层(分区表 / loader2 目录表 / UPD 头 / 签名)
   · 密钥未发现简单派生关系 —— 穷举 17,496 种组合无匹配
   · 同 nonce、同 size、同明文的明文,跨机型密文 100% 不同
-```text
+```
 
 **因此:该固件格式在只读分析下不暴露明文数据。**
 
@@ -134,9 +134,9 @@ python analysis/lens/download_sigma.py
 
 通过 `WPD_CATEGORY_MTP_EXT_VENDOR_OPERATIONS` 枚举到 3 个厂商私有 opcode:
 
-```
-0x9102   0x9103   0x9104
 ```text
+0x9102   0x9103   0x9104
+```
 
 `0x9102` 可成功执行并建立传输上下文。详见
 [`docs/zh/05-厂商私有协议.md`](docs/zh/05-厂商私有协议.md)。
@@ -145,24 +145,24 @@ python analysis/lens/download_sigma.py
 
 与机身固件不同,**镜头固件为明文**(整体熵 6.4–7.0,非加密),可直接分析:
 
-```
+```text
 容器:  "LENS-UPDATE-FILE-SOF:" + 头字段 + "LENS-UPDATE-FILE-EOH:" + 段描述表
        (EOH = End Of **Header**;块大小 512 / 256)
 代码:  完整 ARM Cortex-M Thumb
        6 型号 → 2,096 个唯一函数指纹,加载基址 0x08000000
 变量表:578 项(名字 + 类型/索引)—— 无地址字段,纯调试元数据
-```text
+```
 
 **跨型号指纹匹配**(地址无关:抹去立即数后取 SHA-1):
 
-```
+```text
 6 型号共 2,096 个唯一指纹
   全 6 型号共享 :   17   ← 编译器运行时库(如 __aeabi_fdiv)
   4 型号共享    :  207
   仅 1 型号     : 1,540  ← 型号特定
   变焦组全有    :  245
   仅变焦组有    :   20   ← 候选业务逻辑(命令处理器)
-```text
+```
 
 **方法学观察**:跨型号最一致的反而是编译器生成的库代码,
 业务逻辑应按**型号分化**(变焦有 / 定焦无)来筛选,
@@ -172,15 +172,23 @@ python analysis/lens/download_sigma.py
 偏移级交集 ≈ 0,但 512 字节块级共享 71.4%。
 因此跨型号**不能用文件偏移**定位同一函数,必须使用内容指纹。
 
+**代码区分布**(按每 32 KB 统计指令密度,呈现清晰的三段式结构):
+
+| 区域 | 范围 | 大小 | 性质 |
+|---|---|---|---|
+| 头部 | `0x000000` – `0x028000` | ≈160 KB | 元数据(容器头 + 段描述表 + 变量字典 + 字符串)|
+| **主代码区** | **`0x028000` – `0x068000`** | **≈256 KB** | **可执行代码**(密度 26.8%–82.8%)|
+| 尾部 | `0x068000` – `0x079756` | ≈70 KB | 数据(密度 10.8% → 0.0%)|
+
 详见 [`docs/zh/07-镜头固件.md`](docs/zh/07-镜头固件.md)。
 
 ### 五、跨厂商 L 卡口:`.plf` 是联盟标准
 
 Sigma 的 L 卡口镜头固件与 Panasonic **同魔数、同结构**:
 
-```
-https://www.sigma-global.com/en/support/download/<8字符>.plf
 ```text
+https://www.sigma-global.com/en/support/download/<8字符>.plf
+```
 
 | 字段 | Panasonic | Sigma |
 |---|---|---|
@@ -212,7 +220,7 @@ Leica(`SLLens01.plf`)与 Samyang(`7801V340.plf`)同格式,
 **已知局限(如实记录)**
 - 机身固件数据分区在只读分析下保持密文,其内部结构无法进一步展开
 - 镜头固件的函数边界依赖所选分析方法;四种方法的精度/召回权衡已在
-  `docs/07` §22–26 中量化记录,部分早期结论已勘误并撤回
+  `docs/zh/07-镜头固件.md` §22–26 中量化记录,部分早期结论已勘误并撤回
 - `0x40` 处 4 字节字段的校验算法尚未确定(已试 sum/CRC32/Adler32/MD5/SHA 系列)
 
 ---
