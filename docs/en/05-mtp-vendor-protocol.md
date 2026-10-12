@@ -10,7 +10,7 @@
 Through the **WPD API** on top of the Windows MTP driver, the camera's private
 protocol is reachable with **zero driver modification**:
 
-```
+```text
 Open ✓  →  Capabilities ✓  →  GetSupportedVendorOpcodes ✓  →  ExecuteCommand ✓
 ```
 
@@ -30,7 +30,8 @@ Open ✓  →  Capabilities ✓  →  GetSupportedVendorOpcodes ✓  →  Execut
 > `InterfaceType(InterfaceIsIUnknown)` and let .NET handle the vtable.
 
 ### `IPortableDevice` (IID `625E2DF8-6392-4CF0-9AD1-3CFA5F17775C`)
-```
+
+```text
 3  Open(LPCWSTR, IPortableDeviceValues*)          <- no out parameter!
 4  SendCommand(DWORD, IPortableDeviceValues*, IPortableDeviceValues**)
 5  Content(IPortableDeviceContent**)
@@ -41,6 +42,7 @@ Open ✓  →  Capabilities ✓  →  GetSupportedVendorOpcodes ✓  →  Execut
 ```
 
 ### Other IIDs
+
 | Interface | IID |
 |---|---|
 | `IPortableDeviceValues` | `6848F6F2-3155-4F86-B6F5-263EEEAB3143` |
@@ -58,7 +60,7 @@ Open ✓  →  Capabilities ✓  →  GetSupportedVendorOpcodes ✓  →  Execut
 `SendCommand(flags=0, pParameters, out ppResults)`; the parameters carry two
 properties:
 
-```
+```text
 WPD_PROPERTY_COMMON_COMMAND_CATEGORY  {F0422A9C-5DC8-4440-B5BD-5DF28835658A} pid 1001  [VT_CLSID]
     = category GUID of the target command
 WPD_PROPERTY_COMMON_COMMAND_ID        {F0422A9C-5DC8-4440-B5BD-5DF28835658A} pid 1002  [VT_UI4]
@@ -66,11 +68,13 @@ WPD_PROPERTY_COMMON_COMMAND_ID        {F0422A9C-5DC8-4440-B5BD-5DF28835658A} pid
 ```
 
 ### MTP vendor extension category
-```
+
+```text
 WPD_CATEGORY_MTP_EXT_VENDOR_OPERATIONS = {4D545058-1A2E-4106-A357-771E0819FC56}   // ASCII "MTPX"
 ```
 
 ### MTP_EXT command PIDs (from `WpdMtpExtensions.h`)
+
 | pid | Command | Purpose |
 |---|---|---|
 | **11** | `GET_SUPPORTED_VENDOR_OPCODES` | enumerate vendor opcodes |
@@ -83,6 +87,7 @@ WPD_CATEGORY_MTP_EXT_VENDOR_OPERATIONS = {4D545058-1A2E-4106-A357-771E0819FC56} 
 | 18 | `GET_VENDOR_EXTENSION_DESCRIPTION` | vendor extension description |
 
 ### MTP_EXT property PIDs (category = MTPX)
+
 | pid | Property | Type |
 |---|---|---|
 | 1001 | `OPERATION_CODE` | VT_UI4 (opcode to execute) |
@@ -96,6 +101,7 @@ WPD_CATEGORY_MTP_EXT_VENDOR_OPERATIONS = {4D545058-1A2E-4106-A357-771E0819FC56} 
 | 1014 | `VENDOR_EXTENSION_DESCRIPTION` | VT_LPWSTR |
 
 ### COMMON category properties in results
+
 | pid | Property |
 |---|---|
 | **1003** | `WPD_PROPERTY_COMMON_HRESULT` — command execution HRESULT |
@@ -108,7 +114,7 @@ WPD_CATEGORY_MTP_EXT_VENDOR_OPERATIONS = {4D545058-1A2E-4106-A357-771E0819FC56} 
 
 ## 4. Verified execution flow
 
-```
+```text
 1. IPortableDevice.Open(pnPID, clientInfo=PortableDeviceValues)
 2. Enumerate vendor opcodes:
    SendCommand(category=MTPX, id=11)
@@ -123,7 +129,8 @@ WPD_CATEGORY_MTP_EXT_VENDOR_OPERATIONS = {4D545058-1A2E-4106-A357-771E0819FC56} 
 ```
 
 ### Measured output
-```
+
+```text
 opcode 0x9102 + cmd13:
    pid=1007 VT_UI8   = 0                    data size
    pid=1013           = 262144 (256KB)      optimal buffer size

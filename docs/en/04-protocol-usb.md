@@ -63,7 +63,7 @@ vtable slots: `Open`=3, `GetCapabilities`=4, `GetPnPIdentifier`=5.
 ```powershell
 Start-Process powershell -Verb RunAs -ArgumentList '-Command','Start-Service WPDBusEnum'
 # verified: WPDBusEnum = Running / Automatic
-```
+```text
 
 ---
 

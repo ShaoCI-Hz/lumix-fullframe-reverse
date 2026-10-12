@@ -19,7 +19,7 @@
 
 ## 研究路线
 
-```
+```text
 取得公开固件更新包
       ↓
 解析 UPD 容器格式 (02)
@@ -95,4 +95,4 @@
 
 ```bash
 python ../../analysis/lens/download_sigma.py
-```
+```text

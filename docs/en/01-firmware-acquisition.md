@@ -12,7 +12,7 @@
 Panasonic's main site has CDN anti-scraping for scripted requests, but the
 **Japanese support site is directly reachable**. The full path:
 
-```
+```text
 https://panasonic.jp/dc/                                    <- entry point (200)
   → https://av.jpn.support.panasonic.com/support/dsc/download/top.html
   → ./index4.html        "デジタル一眼カメラ(フルサイズ)" full-frame model list
@@ -23,7 +23,7 @@ https://panasonic.jp/dc/                                    <- entry point (200)
 
 ### Firmware direct link
 
-```
+```text
 https://panasonic.jp/support/share2/eww/com/dsc/ff/zip/S5m2XV27.zip
 ```
 

@@ -18,7 +18,7 @@
 
 **Direct-link pattern (verified 200):**
 
-```
+```text
 https://www.sigma-global.com/en/support/download/<8-char-filename>.plf
 ```
 
@@ -35,7 +35,7 @@ Naming rule: `<4-char alphanumeric lens code><4-digit version>` = `S02D`+`0120` 
 
 ## 2. ★ Header structure: same magic, different version
 
-```
+```text
                 Panasonic                Sigma
 0x00  "LENS-UPDATE-FILE-SOF:"    <- identical (21 bytes)
 0x15  ver = 0x200 (512)          ver = 0x300 (768)   <- format version
@@ -75,7 +75,7 @@ The same ID repeats at `0x34` but with **byte0 changed**
 
 ### 2.2 The 12-byte nonce field
 
-```
+```text
 Panasonic: 6d 00 06 93 c3 47 f0 c8 cc 00 01 01   <- real nonce
 Sigma:     ff ff ff ff ff ff ff ff ff ff ff ff   <- all FF = unused
 ```
@@ -97,7 +97,7 @@ whereas **Sigma's does** — a difference in image completeness.
 
 ### 3.1 Sigma 30mm vector table @ file offset `0x45A`
 
-```
+```text
 [ 0] SP     = 0x20005610   <- initial stack pointer (SRAM)
 [ 1] Reset  = 0x00000401   <- reset vector (Thumb, bit0=1)
 [ 2] IRQ0   = 0x00010381   NMI
@@ -125,7 +125,7 @@ previously been an inference).
 Reset vector `0x400` → offset `0x400` relative to the image base.
 If the image starts at file offset `0x45A`, reset code should sit at file `0x85A`:
 
-```
+```text
 0x00085A  00f006f8   bl    #0x86a
 0x00085E  0148       ldr   r0, [pc, #4]
 0x000860  8047       blx   r0
@@ -157,7 +157,7 @@ depends on the vendor's packaging**.
 
 ### 4.1 Sigma (compact)
 
-```
+```text
 Sig 14mm / 50mm (1,049,690 B, identical):
   0x5A  512          <- block size
   0x5E  15
@@ -181,7 +181,7 @@ than content**.
 
 ### 4.2 Panasonic (complex)
 
-```
+```text
 0x6D  "PSLFDH"        0x78  "HDFLSPPSLFDI"       0x9A  "IDFLSPPSLF00"
 ```
 
@@ -261,7 +261,7 @@ python analysis/lens/plf_vendor_compare.py  # cross-vendor header/ID/entropy
 python analysis/lens/plf_deep_compare.py    # FF padding / segment table / code location
 python analysis/lens/plf_checksum.py        # checksum analysis attempts + ID encoding
 python analysis/lens/sigma_vt.py            # ★ vector-table location and base verification
-```
+```text
 
 ---
 

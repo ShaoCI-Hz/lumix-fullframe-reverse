@@ -27,7 +27,7 @@ understand platform evolution and model differences.
 
 The field decodes as BCD into `MM/DD HH:MM`:
 
-```
+```text
 DC-S5M2   0x02102018 → 02/10 20:18
 DC-S5M2X  0x02102019 → 02/10 20:19
 ```
@@ -113,7 +113,7 @@ through the firmware itself.
 python tools/pana_unpack.py firmware/S1H__V28.bin --list
 # or use the comparison script
 python analysis/body/multi_model_diff.py
-```
+```text
 
 Analysis focal points:
 - `+0x0C` model ID (platform code)
@@ -127,4 +127,4 @@ Analysis focal points:
 
 1. Add **DC-S1R / DC-BS1H / DC-S1M2 / DC-S1RM2** samples to complete the full-frame map
 2. With historical versions available, run a **same-model version diff** (missing: only the current version is officially offered)
-3. The old platform contains `zimage` / `rootfs` — an unencrypted old version would be a useful opening (all current samples are encrypted)
+3. The old platform contains `zimage` / `rootfs` — if an unencrypted older version could be obtained, it would be a useful extra sample (all current samples are encrypted)

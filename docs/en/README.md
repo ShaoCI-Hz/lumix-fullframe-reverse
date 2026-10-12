@@ -21,7 +21,7 @@ Reading in order is recommended.
 
 ## Research path
 
-```
+```text
 Obtain public firmware update packages
       ↓
 Parse the UPD container format (02)
@@ -106,4 +106,4 @@ Third-party L-mount lens firmware can be downloaded directly (official links):
 
 ```bash
 python ../../analysis/lens/download_sigma.py
-```
+```text

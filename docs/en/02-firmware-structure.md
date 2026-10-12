@@ -20,7 +20,7 @@ Tool: `tools/pana_unpack.py`
 
 ## 2. File header
 
-```
+```text
 offset     field
 0x00  u32  magic        = 0x00445055  "UPD\0"
 0x04  u32  block_size   = 512
@@ -41,7 +41,7 @@ match, showing this field and the partition table are self-consistent.
 
 ## 3. Partition table entry structure (92 bytes)
 
-```
+```text
 offset   field
 +0x00  u32   total image data size (same in every entry)
 +0x04  u32   boot partition size   (valid only in the boot entry)
@@ -59,7 +59,7 @@ means the data area has begun and parsing must stop. (Otherwise ciphertext is
 misread as partition entries, producing hundreds of junk records.)
 
 **Field-relationship check**:
-```
+```text
 program       off 0x00080000 + size 0x02CC0000 = 0x02D40000
 compress_pr   off 0x02D40000                  <- abuts exactly ✓
 ```
@@ -138,7 +138,7 @@ recorded only for completeness and is limited by the signature guarantee.
 
 ---
 
-## 7. Checksum mechanism — `+0x2C` is SHA-256 (solved)
+## 7. Checksum mechanism — `+0x2C` is SHA-256 (established)
 
 Reverse-engineered from the plaintext partitions, the 32-byte digest at `+0x2C`
 is confirmed to be **SHA-256**:

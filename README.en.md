@@ -53,7 +53,7 @@ Full notes in [`docs/en/README.md`](docs/en/README.md), read in order:
 
 ## Repository layout
 
-```
+```text
 .
 ├── README.md              this file (English)
 ├── README.en.md           English edition · README.md is the Chinese edition
@@ -89,7 +89,7 @@ python tools/pana_unpack.py firmware/S5m2XV27.bin --extract program --out-dir ou
 
 # 4) Lens firmware: fetch third-party L-mount samples (official direct links)
 python analysis/lens/download_sigma.py
-```
+```text
 
 ---
 
@@ -111,7 +111,7 @@ Partition table: @0x2DC, 92 bytes each, 58 entries
   entry: name(13B) | address-space tag(3B) | size | offset | flags
          | SHA-256 (32B, plaintext) | nonce (12B)
 Data area: 0x200..EOF; partition offsets are relative to 0x200
-```
+```text
 
 > Note: the model ID at `+0x00C` lies outside the CRC32 coverage.
 
@@ -130,7 +130,7 @@ Verification record:
   · no simple key-derivation relation found — 17,496 combinations exhausted
   · identical plaintext with the same nonce and size yields 100% different
     ciphertext across models
-```
+```text
 
 **Therefore: this format does not expose plaintext under read-only analysis.**
 
@@ -143,7 +143,7 @@ Three vendor-private opcodes enumerated via
 
 ```
 0x9102   0x9103   0x9104
-```
+```text
 
 `0x9102` executes successfully and establishes a transfer context. See
 [`docs/en/05-mtp-vendor-protocol.md`](docs/en/05-mtp-vendor-protocol.md).
@@ -161,7 +161,7 @@ code:      full ARM Cortex-M Thumb
            6 models -> 2,096 unique function fingerprints, base 0x08000000
 vars:      578 entries (name + type/index) — no address fields,
            pure debug metadata
-```
+```text
 
 **Cross-model fingerprinting** (address-independent: immediates normalised
 away, then SHA-1):
@@ -173,7 +173,7 @@ away, then SHA-1):
   single model only : 1,540  <- model-specific
   all zoom models   :  245
   zoom-only         :   20   <- candidate business logic (command handlers)
-```
+```text
 
 **Methodological observation**: the code that is most consistent across models
 is compiler-generated library code. Business logic must be filtered by
@@ -193,7 +193,7 @@ Sigma L-mount lens firmware shares the same magic and structure as Panasonic:
 
 ```
 https://www.sigma-global.com/en/support/download/<8-char>.plf
-```
+```text
 
 | Field | Panasonic | Sigma |
 |---|---|---|

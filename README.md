@@ -50,7 +50,7 @@
 
 ## 仓库结构
 
-```
+```text
 .
 ├── README.md              本文件(简体中文)
 ├── README.en.md           英文版(English)
@@ -86,7 +86,7 @@ python tools/pana_unpack.py firmware/S5m2XV27.bin --extract program --out-dir ou
 
 # 4) 镜头固件:下载第三方 L 卡口样本(官方直链)
 python analysis/lens/download_sigma.py
-```
+```text
 
 ---
 
@@ -108,7 +108,7 @@ python analysis/lens/download_sigma.py
   项内: name(13B) | 地址空间标记(3B) | size | offset | flags
         | SHA-256(32B,明文) | nonce(12B)
 数据区: 0x200..EOF,分区偏移为相对 0x200 的文件偏移
-```
+```text
 
 > **注意**:机型 ID 位于 `+0x00C`,处于 CRC32 覆盖范围之外。
 
@@ -124,7 +124,7 @@ python analysis/lens/download_sigma.py
   · 明文仅存在于元数据层(分区表 / loader2 目录表 / UPD 头 / 签名)
   · 密钥未发现简单派生关系 —— 穷举 17,496 种组合无匹配
   · 同 nonce、同 size、同明文的明文,跨机型密文 100% 不同
-```
+```text
 
 **因此:该固件格式在只读分析下不暴露明文数据。**
 
@@ -136,7 +136,7 @@ python analysis/lens/download_sigma.py
 
 ```
 0x9102   0x9103   0x9104
-```
+```text
 
 `0x9102` 可成功执行并建立传输上下文。详见
 [`docs/zh/05-厂商私有协议.md`](docs/zh/05-厂商私有协议.md)。
@@ -151,7 +151,7 @@ python analysis/lens/download_sigma.py
 代码:  完整 ARM Cortex-M Thumb
        6 型号 → 2,096 个唯一函数指纹,加载基址 0x08000000
 变量表:578 项(名字 + 类型/索引)—— 无地址字段,纯调试元数据
-```
+```text
 
 **跨型号指纹匹配**(地址无关:抹去立即数后取 SHA-1):
 
@@ -162,7 +162,7 @@ python analysis/lens/download_sigma.py
   仅 1 型号     : 1,540  ← 型号特定
   变焦组全有    :  245
   仅变焦组有    :   20   ← 候选业务逻辑(命令处理器)
-```
+```text
 
 **方法学观察**:跨型号最一致的反而是编译器生成的库代码,
 业务逻辑应按**型号分化**(变焦有 / 定焦无)来筛选,
@@ -180,7 +180,7 @@ Sigma 的 L 卡口镜头固件与 Panasonic **同魔数、同结构**:
 
 ```
 https://www.sigma-global.com/en/support/download/<8字符>.plf
-```
+```text
 
 | 字段 | Panasonic | Sigma |
 |---|---|---|
