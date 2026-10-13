@@ -30,6 +30,7 @@ mechanisms**, and **USB/PTP protocols** of the Panasonic LUMIX full-frame line
 | **Vendor protocol** | MTP vendor extension channel; 3 Panasonic-private opcodes enumerated |
 | **Lens firmware** | Fully plaintext + 578-entry variable dictionary + ARM Cortex-M code |
 | **Lens disassembly** | 2,096 function fingerprints across 6 models; load base resolved to `0x08000000` |
+| **Ghidra cross-check** | 133 verified entries as seeds: 1,095 → **1,824** functions (+66.6%); 226 leaf functions recovered |
 | **Cross-vendor L-mount** | `.plf` is an L-Mount Alliance standard (shared by Sigma / Leica / Samyang) |
 
 ---
@@ -46,7 +47,7 @@ Full notes in [`docs/en/README.md`](docs/en/README.md), read in order:
 | 04 | [USB access](docs/en/04-protocol-usb.md) | WPD/MTP access status and environment setup |
 | 05 | [Vendor protocol](docs/en/05-mtp-vendor-protocol.md) | MTP vendor extension channel and opcode enumeration |
 | 06 | [Cross-model comparison](docs/en/06-multi-model-comparison.md) | 6-model survey and platform evolution |
-| 07 | [Lens firmware](docs/en/07-lens-firmware.md) | Plaintext structure, disassembly methods, cross-model fingerprint clustering (with errata) |
+| 07 | [Lens firmware](docs/en/07-lens-firmware.md) | Plaintext structure, disassembly methods, cross-model fingerprint clustering, Ghidra cross-check (with errata) |
 | 09 | [Third-party L-mount](docs/en/09-third-party-lens.md) | Cross-vendor container standard, Sigma vector table |
 
 ---
@@ -193,6 +194,24 @@ structure):
 | Header | `0x000000` – `0x028000` | ≈160 KB | metadata (container header + segment descriptor table + variable dictionary + strings) |
 | **Main code region** | **`0x028000` – `0x068000`** | **≈256 KB** | **executable code** (density 26.8%–82.8%) |
 | Tail | `0x068000` – `0x079756` | ≈70 KB | data (density 10.8% → 0.0%) |
+
+**Where function identification finally converges**: loading the `.plf` into Ghidra
+with base address `0x08000000` (a raw binary **must** be given an explicit base,
+otherwise every address is misaligned) yields **1,095** functions from its
+automatic analysis. Feeding the 133 doubly-verified entries above as **seeds**
+raises that to **1,824** — a net **+66.6%**.
+
+The two methods are strongly **complementary**:
+
+- Ghidra found **46 of the 133** entries on its own (34.6%);
+- the other **87** (65.4%) are reachable only by our method, and they unlock
+  642 additional functions;
+- conversely, **226** of the new functions are **leaf functions** (no `push`
+  prologue but a return) — a class a prologue criterion **structurally cannot
+  enumerate**, because compilers emit no prologue for a function that calls nothing.
+
+708 of the 729 new functions (97.1%) land in the main code region, where the
+suspicious-instruction rate is only **1.4%**.
 
 See [`docs/en/07-lens-firmware.md`](docs/en/07-lens-firmware.md).
 

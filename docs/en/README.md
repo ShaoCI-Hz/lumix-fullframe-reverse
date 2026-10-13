@@ -14,7 +14,7 @@ Reading in order is recommended.
 | 04 | [USB access](04-protocol-usb.md) | WPD/MTP access status, interface definitions, environment setup |
 | 05 | [Vendor private protocol](05-mtp-vendor-protocol.md) | MTP vendor extension channel, private opcode enumeration |
 | 06 | [Cross-model comparison](06-multi-model-comparison.md) | Six models side by side, platform evolution, model-specific partitions |
-| 07 | [Lens firmware](07-lens-firmware.md) | Plaintext structure, disassembly methods, cross-model fingerprint clustering (with errata) |
+| 07 | [Lens firmware](07-lens-firmware.md) | Plaintext structure, disassembly methods, cross-model fingerprint clustering, Ghidra cross-check (with errata) |
 | 09 | [Third-party L-mount](09-third-party-lens.md) | Cross-vendor container standard, Sigma vector table |
 
 ---
@@ -69,6 +69,13 @@ the reproducing script is `../../analysis/lens/verify_claims.py`.
 the analysis method used. The precision/recall trade-off of four approaches is
 quantified in `07-lens-firmware.md` §22–26 (strict set / reachability / hybrid /
 endpoint segmentation), and some earlier statistics were revised accordingly.
+
+**Regarding where function identification converges:** the self-built methods
+above were preparation for the final answer, not the answer itself. Handing the
+133 doubly-verified entries of §22 to Ghidra's recursive descent as **seeds**
+raised the function count from 1,095 to **1,824** (+66.6%) and recovered 226
+**leaf functions that a prologue criterion structurally cannot enumerate**.
+See §27 of that document.
 
 ---
 

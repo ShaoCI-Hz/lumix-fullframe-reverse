@@ -2219,3 +2219,160 @@ python analysis/lens/merge_code.py         # merge + code-region distribution ma
 **Endpoint segmentation (§26) is the single best method in terms of coverage and
 independence**, and **the merged set (§26.4) is the best available approximation
 of "the executable code region that can currently be confirmed"**.
+
+---
+
+## 27. ★★★ Cross-checking with Ghidra: 1,095 → 1,824 functions
+
+### 27.1 The next step §22.9 recommended, actually carried out
+
+§22.9 concluded that the remaining work should be handed to a real decompiler
+rather than re-implemented. This section reports doing exactly that, and the
+result turns out to settle the precision/coverage trade-off left open in §26.8.
+
+### 27.2 Method
+
+| Setting | Value |
+|---|---|
+| Loader | `BinaryLoader` (`.plf` is a raw binary, not ELF) |
+| Base address | `0x08000000` — **must be given explicitly**, otherwise every address is misaligned |
+| Language | `ARM:LE:32:Cortex` |
+| Seeds | the 133 doubly-verified entries of §22 |
+
+Procedure:
+
+1. Import the image and let Ghidra run its automatic analysis
+   (recursive descent + call graph + decompiler switch analysis).
+2. Record the baseline function count.
+3. Feed the 133 entries as seeds: for each, disassemble
+   (`followFlow=True`, **restricted to the code region** `0x028000..0x068000`)
+   and create a function at that address.
+4. Re-run analysis and compare.
+
+Note on the base address: Ghidra reports
+`Successfully applied "-loader-baseAddr" to "Base Address" (old: "null", new: "0x08000000")`.
+Without this, the 133 absolute addresses would not match anything.
+
+### 27.3 ★ Result
+
+| Stage | Total | header-meta | main-code | tail-data |
+|---|---|---|---|---|
+| Ghidra automatic analysis only | **1,095** | 5 | 1,067 | 23 |
+| + our 133 entries as seeds | **1,824** | 17 | 1,775 | 32 |
+| **delta** | **+729 (+66.6%)** | +12 | **+708** | +9 |
+
+Entry overlap:
+
+| | count | share |
+|---|---|---|
+| Ghidra found on its own | **46 / 133** | 34.6% |
+| **only we provide** | **87 / 133** | **65.4%** |
+
+All 87 new entries produced a function (`failed=0`). The 729 new functions split
+into **87 directly at our entry points** and **642 discovered by recursive
+descent expanding from them**.
+
+### 27.4 Why the two methods are complementary
+
+**(a) Ghidra's blind spot → our value.**
+Ghidra expands outward from what it can already reach by call graph. The 87
+entries it cannot reach by itself are exactly the seeds that unlock the 642
+additional functions. In other words: **a prologue-based scan and a recursive
+descent fail in different places, and the union is substantially larger than
+either.**
+
+**(b) Our blind spot → Ghidra's value.**
+The prologue criterion of §22 is **structurally blind to leaf functions**:
+compilers do not emit a `push` prologue for a function that calls nothing.
+§26.2 already measured this (73.4% of region starts carry no prologue). After
+seeding, **226 of the 708 new functions in the main code region have no `push`
+prologue but do have a return** — i.e. leaf functions that the §22 criterion
+could never enumerate.
+
+This closes the §26.8 conclusion. It is not that no method exists with both high
+precision and high coverage — it is that **such a method requires a real
+recursive descent, which is what a decompiler provides**. The self-built
+approaches of §23–26 were the right preparation (they produced the 133 verified
+seeds and the code-region distribution map that make the base address and the
+region restriction trustworthy), but not the final answer.
+
+### 27.5 Quality verification by region and instruction class
+
+Classification criteria: `push` in the first four instructions = prologue;
+`bx lr` or `pop {…,pc}` anywhere = return; mnemonics starting with `v`
+(excluding `vpush`/`vpop`), plus `svc`/`udf`/`cdp`/`mcr`/`ldc` = suspicious
+(typical of data being read as Thumb instructions).
+
+| Region | n | has prologue | has return | suspicious |
+|---|---|---|---|---|
+| header-meta (`< 0x028000`) | 17 | 2 (11.8%) | 1 (5.9%) | **8 (47.1%)** |
+| **main-code** (`0x028000`–`0x068000`) | **1,775** | 431 (24.3%) | 762 (42.9%) | **24 (1.4%)** |
+| tail-data (`> 0x068000`) | 32 | 7 (21.9%) | 22 (68.8%) | 0 (0.0%) |
+
+**97.3% of the 1,824 functions lie in the main code region, where the suspicious
+rate is only 1.4%.** The 12 new functions in the header region carry a 47.1%
+suspicious rate: these are `followFlow` overshoot into metadata, and they are
+**identifiable and excludable by region** — which is only possible because §26
+established the region boundaries.
+
+The low prologue share (24.3%) is itself a finding: it means **most functions in
+this firmware are leaf functions or use a non-standard prologue**, which is the
+quantitative reason the §22 criterion was so restrictive.
+
+### 27.6 An error I made and corrected
+
+Recorded for completeness, because the first version of this measurement was
+wrong in two independent ways:
+
+1. **Sampling bias.** My first spot-check sorted the new functions by address and
+   inspected the first few. Those happened to be the smallest offsets — which
+   land in the header metadata region — so the sample suggested "the new
+   functions are mostly garbage". Stratifying by region showed the false
+   positives are only 12 of 729 (1.6%), concentrated in one region.
+
+2. **Misread API semantics.** I read the third argument of
+   `ArmDisassembleCommand(startAddr, restrictedSet, followFlow)` as a
+   "force" flag and set it to `False` to be conservative. It is actually
+   `followFlow`. With `False`, 32 of the 87 entries failed to produce a
+   function. The correct usage is `followFlow=True` **with `restrictedSet`
+   bounded to the code region**, which yields all 87 and keeps the overshoot
+   visible and separable.
+
+Both errors are the same failure mode as §21.2 and §22: a plausible reading of a
+small sample standing in for a stratified measurement.
+
+### 27.7 Updated method matrix
+
+| § | Method | Anchor | Coverage | Precision | Key output |
+|---|---|---|---|---|---|
+| 22 | strict | BL ∩ prologue | 2.3% | high | 133 trustworthy entries |
+| 23 | reachability | seeds + control flow | 36.6% | low (boundaries) | 291,085 control-flow edges |
+| 24 | hybrid | whole-file BL | 27.3% | low (74.8% overlap) | proving whole-file scanning pollutes |
+| 25 | correct method | code-flow BL + return stack | 4.1% | highest (overlap 10.3%) | the precision ceiling |
+| 26 | endpoint segmentation | function-end instructions | 33.1% | medium | code-region distribution map |
+| **27** | **Ghidra + our seeds** | **recursive descent from 133 verified entries** | **1,775 functions in the code region** | **high (1.4% suspicious)** | **★★★ 1,095 → 1,824 functions; 226 leaf functions recovered** |
+
+**Revised conclusion**: the trade-off in §26.8 is real *for a self-built
+scanner*, but a real recursive descent removes it. The 133 entries of §22 were
+not an end in themselves — they are the input that makes the recursive descent
+complete.
+
+### 27.8 Reproduction
+
+```bash
+# 1) import once (a raw binary needs an explicit base address)
+support/analyzeHeadless.bat <projDir> <projName> \
+    -import firmware/4001V020.plf \
+    -processor ARM:LE:32:Cortex \
+    -loader BinaryLoader -loader-baseAddr 0x08000000
+
+# 2) seed with the verified entries and compare
+export GHIDRA_INSTALL_DIR=<ghidra dir>
+export JAVA_HOME=<jdk 21>
+python analysis/lens/ghidra_crosscheck.py \
+    --project-dir <projDir> --project-name <projName> \
+    --program /4001V020.plf --outdir out
+# output: functions_baseline.tsv, functions_with_seeds.tsv
+```
+
+Requires Ghidra 12.1.x (JDK 21) and `pip install pyghidra`.
