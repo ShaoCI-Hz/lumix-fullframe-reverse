@@ -233,6 +233,28 @@ all**, including OIS / iris / zoom / focus — so the symbol set is a
 point at the **command path**, the most natural entry point for analysing the
 lens protocol.
 
+The table is followed by a **9-entry task control block (TCB) array**
+(24 bytes each): `+0x08` is a distinct priority (1–8) and `+0x10` is an **odd**
+value — a Thumb function pointer — the task entry. **But those pointers live at
+`0x10xxxxxx`, outside this image**: the task bodies are not in this `.plf`,
+consistent with §20.3 (".plf is a partial update image").
+
+**Three follow-up targets, and what happened**: three concrete extractions were
+attempted from this table — decompile `CMD_TSK`, locate `SPI_SUBFI_FLG`, and
+annotate the 1,824 functions with symbol names. **All three are not possible, for
+the same reason**: the symbols in this `.plf` are **inert debug metadata** and
+**zero instructions reference them** (the variable-dictionary window
+`0x4000`–`0x9000` has **0** references).
+
+**Substitute deliverable — a function importance map**: objective metrics
+(in-degree / out-degree / size / region) were computed for all 1,095 functions:
+41 hubs (called ≥ 20×, mostly 4–6 byte getters/setters), 853 mid, 201 leaf, and
+6 **candidate top-level dispatchers** — of which `0x08045D00` (1,014 bytes,
+calling 33 functions, called by nothing) is the most dispatch-like.
+
+**Region correction**: the tail is **not** pure data (it holds 23 functions), and
+the header is **almost** pure metadata (only 5 of 1,095 functions).
+
 See [`docs/en/07-lens-firmware.md`](docs/en/07-lens-firmware.md).
 
 ### 5. Cross-vendor L-mount: `.plf` is an alliance standard

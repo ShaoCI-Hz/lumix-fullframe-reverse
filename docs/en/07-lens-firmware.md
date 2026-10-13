@@ -2392,12 +2392,16 @@ names** that is **not** among those 578 entries and sits in the **code region**,
 not the header. It was found while cross-checking string references with Ghidra
 (§27): almost no string in this firmware is referenced by an instruction, but
 one contiguous run of names in the code region turned out to be a
-**fixed-stride resource table**.
+**resource table**.
+
+**Correction (this section originally stated a fixed 12-byte stride — that was
+wrong).** Each entry is a NUL-terminated name **padded to a 4-byte boundary**.
+Entry lengths are 8, 12 or 16 bytes depending on the name, and all padding bytes
+are zero. The table is 296 bytes, not 288.
 
 ### 28.2 The table
 
-Record stride is **12 bytes** (name + NUL, zero-padded), 22 resources plus 2
-semaphores, spanning 288 bytes:
+22 resources plus 2 semaphores:
 
 | Kind | Count | Names |
 |---|---|---|
@@ -2406,6 +2410,20 @@ semaphores, spanning 288 bytes:
 | **Flag** (`_FLG`) | 7 | `USER_FLG` **`UART_FLG`** `OIS_FLG` `EXP1_FLG` `EXP2_FLG` `TRANS_FLG` **`SPI_SUBFI_FLG`** |
 | **Data queue** (`_DTQ`) | 4 | `BLCOM_DTQ` **`CMD_DTQ`** `OIS_DTQ` `DATA_LATCH_DTQ` |
 | **Cycle** (`_CYC`) | 2 | `USER_CYC` `OIS_CYC` |
+
+Parsed entry lengths (`4001V020.plf`), showing the 4-byte alignment:
+
+```text
+offset    name              name+NUL   aligned   pad
+0x2bbd0   INITIAL_TSK            12        12      -
+0x2bbdc   DATA_LATCH_TSK         15        16      00
+0x2bbec   TRANS_TSK              10        12      0000
+0x2bbf8   EXP1_TSK                9        12      000000
+0x2bc1c   CMD_TSK                 8         8      -
+0x2bca8   SPI_SUBFI_FLG          14        16      0000
+0x2bcd4   DATA_LATCH_DTQ         15        16      00
+0x2bcf0   OIS_CYC                 8         8      -
+```
 
 Raw bytes around the table start (`4001V020.plf`, file offset `0x2bbc8`):
 
@@ -2416,9 +2434,10 @@ Raw bytes around the table start (`4001V020.plf`, file offset `0x2bbc8`):
 ```
 
 The 8 bytes preceding the first name (`fb a0 03 10 91 44 06 10`) read as two
-little-endian words `0x1003a0fb` / `0x10064491` — consistent with code
-addresses, i.e. a small pointer/count header ahead of the name block. This is
-recorded as an observation, not a confirmed structure.
+little-endian words `0x1003a0fb` / `0x10064491`. Both are **odd**, i.e. Thumb
+function pointers (see §28.7) — an entry/initialisation pair ahead of the name
+block. Initially recorded as "consistent with code addresses"; now confirmed,
+since every such value in this region is odd.
 
 ### 28.3 Cross-model: a clean two-way platform split
 
@@ -2471,7 +2490,48 @@ per-mechanism.
   a build-time choice, and any conclusion drawn from symbols must state which
   platform it holds for.
 
-### 28.6 Reproduction
+### 28.6 The records that follow: a 9-entry task control block array
+
+Immediately after the last name (`0x2bcf8`) there is padding, and from `0x2bd2c`
+an array of **9 records of 24 bytes each** — one per task name, **in the same
+order**:
+
+| # | task | `+0x00` | `+0x08` | `+0x10` | `+0x14` |
+|---|---|---|---|---|---|
+| 0 | `INITIAL_TSK` | `0803f828` | `1` | `1003b1c9` | `0300` |
+| 1 | `DATA_LATCH_TSK` | `0803ced0` | `2` | `10060a35` | `0300` |
+| 2 | `TRANS_TSK` | `0803d1d0` | `2` | `100618b9` | `0800` |
+| 3 | `EXP1_TSK` | `080369a0` | `3` | `10061c91` | `0800` |
+| 4 | `EXP2_TSK` | `080371a0` | `3` | `1005f463` | `0a00` |
+| 5 | `BLCOM_TSK` | `080355a0` | `5` | `10043bd9` | `0a00` |
+| 6 | `CMD_TSK` | `08035fa0` | `6` | `10048327` | `0600` |
+| 7 | `USER_TSK` | `08039798` | `7` | `10039b6b` | `0400` |
+| 8 | `OIS_TSK` | `0803c3b0` | `8` | `00000000` | `0000` |
+
+Reading of the fields:
+
+| Field | Value | Reading |
+|---|---|---|
+| `+0x00` | a pointer **into this image** | points at a block of further pointers, not at code (verified: the bytes there are pointer data, not instructions) |
+| `+0x04`, `+0x0C` | `0` | — |
+| `+0x08` | small integer, `1..8`, distinct | consistent with **priority** |
+| `+0x10` | **odd** number in `0x10xxxxxx` | a **Thumb function pointer** — the task entry |
+| `+0x14` | `0x300`/`0x400`/`0x600`/`0x800`/`0xA00` | a size or time quantum |
+
+**The important negative result**: the `+0x10` pointers are odd (therefore Thumb
+code pointers) but lie at `0x10xxxxxx`, which is **outside this image**
+(`0x08000000`–`0x08079756`). **The task bodies are not in this `.plf`.** Every
+value in the `0x10xxxxxx` band across this region is odd — 14 of 14 — so the band
+is a code-pointer space, not data.
+
+This is consistent with §20.3 (".plf is a partial update image") and it is
+exactly why §29 could not decompile the task bodies.
+
+**What this means for anyone reading the table**: the names identify the RTOS
+objects faithfully, but the code that implements each task is in the part of the
+firmware that this `.plf` does not carry.
+
+### 28.7 Reproduction
 
 ```bash
 python analysis/lens/rtos_resources.py firmware/
@@ -2479,3 +2539,116 @@ python analysis/lens/rtos_resources.py firmware/
 ```
 
 No decompiler is needed — the table is plaintext in the image.
+
+---
+
+## 29. What could and could not be recovered: three attempts and a substitute
+
+### 29.1 The three attempts
+
+Following §28, three concrete extractions were attempted. All three failed, for
+the **same** reason — and that reason is itself the finding.
+
+| # | Attempt | Method | Result |
+|---|---|---|---|
+| 1 | Decompile `CMD_TSK` to recover a command dispatch table | read TCB `+0x10`, create a function there, decompile | **not possible** — the task body lives at `0x10xxxxxx`, outside this `.plf` |
+| 2 | Locate `SPI_SUBFI_FLG` and recover the interface sequence | derive the flag's RAM address, then find its readers/writers | **not possible** — see §29.2 |
+| 3 | Annotate the 1,824 functions with symbol names | map the 578-entry dictionary onto code | **not possible** — the dictionary is read by **zero** instructions |
+
+### 29.2 Root cause: the symbols are inert debug metadata
+
+Ghidra reports, over the whole image:
+
+```text
+references into the variable-dictionary window 0x4000-0x9000 : 0
+  from 0 distinct functions
+```
+
+Not one instruction reads the variable dictionary, the RTOS resource-name table,
+or the string pool. They are **metadata carried inside the image** — useful
+precisely because they are inert: the code does not depend on them, so they can be
+read without understanding anything else.
+
+The practical consequence is that **a symbol name cannot be used to find the code
+that uses that symbol**. The name↔code association a debug build would carry is
+absent here. §28's TCB array is the exception that proves the rule: it is the one
+place where names and code pointers sit in a single structure — and even there
+the pointers leave the image.
+
+This also explains the long-standing oddity noted in §27: why almost no string in
+this firmware is referenced by an instruction.
+
+### 29.3 Substitute deliverable: a function importance map
+
+Since symbol names cannot do it, an objective substitute was computed for all
+1,095 Ghidra-identified functions: in-degree (times called), out-degree (functions
+called), body size, region.
+
+| Class | Criterion | Count |
+|---|---|---|
+| hub | called ≥ 20 times | 41 |
+| mid | called 3–19 times | 853 |
+| leaf / entry | called 0–2 times | 201 |
+
+**The hubs are tiny**: `0x08032B38` (6 bytes, called 60×), `0x080402B8`,
+`0x0806528E`, `0x080675D0` (4 bytes each, 24×). A 4–6 byte function called
+dozens of times is the signature of a **getter/setter or a flag test**, not
+business logic.
+
+**Top-level dispatchers** — in-degree 0 with high out-degree, i.e. nothing in the
+image calls them, so they are entry points or periodic callers:
+
+| Offset | Size | Calls |
+|---|---|---|
+| `0x08045D00` | 1,014 | **33** |
+| `0x08055AE4` | 780 | 16 |
+| `0x08057C06` | 1,046 | 14 |
+| `0x0806889A` | 518 | 11 |
+| `0x08055204` | 520 | 10 |
+| `0x08059648` | 828 | 10 |
+
+`0x08045D00`, calling 33 distinct functions while nothing calls it, is the most
+dispatch-like function in the image. It is **not** `CMD_TSK` — that body is absent
+— but it is the best available approximation of "a top-level scheduler", and the
+natural place to begin reading control flow.
+
+### 29.4 Region correction
+
+§26.5 described the layout as header = metadata, main code, tail = data. A
+per-function census refines this:
+
+| Region | Functions | Total bytes | Average size |
+|---|---|---|---|
+| header (`< 0x028000`) | 5 | 350 | 70.0 |
+| main code (`0x028000`–`0x068000`) | 1,067 | 74,525 | 69.8 |
+| tail (`> 0x068000`) | 23 | 1,573 | 68.4 |
+
+The header is **almost** pure metadata — 5 functions out of 1,095, about 0.1% of
+code bytes — so §26.5's description holds. But the tail holds **23 functions**,
+so "tail = data" was too strong. Functions do not respect boundaries that were
+inferred from instruction density; those boundaries are statistical, not exact.
+
+### 29.5 Reproduction
+
+```bash
+# function importance map
+python analysis/lens/function_map.py --project-dir <dir> --project-name <name> \
+      --program /4001V020.plf --outdir out
+# output: function_map.tsv — offset, name, size, region, outdeg, indeg, class
+
+# the census behind §29.2
+python analysis/lens/ref_census.py --project-dir <dir> --project-name <name> \
+      --program /4001V020.plf
+```
+
+### 29.6 Summary of §28–29
+
+- The lens firmware is a **multi-tasking RTOS** whose **resource table is
+  embedded in plaintext** and shared verbatim by four of six lenses.
+- Its **task bodies are not in the `.plf`**, and its **symbols are referenced by
+  nothing** — so the two things one would most want to follow (the command
+  handler; the flag that gates the SPI path) cannot be reached from this artefact
+  alone.
+- What *can* be reached: the RTOS object inventory, the platform split, per-task
+  priority and entry-pointer structure, and a ranked function map with six
+  candidate top-level dispatchers.
