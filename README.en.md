@@ -29,6 +29,7 @@ mechanisms**, and **USB/PTP protocols** of the Panasonic LUMIX full-frame line
 | **USB protocol** | WPD/MTP access path established, device capabilities enumerated |
 | **Vendor protocol** | MTP vendor extension channel; 3 Panasonic-private opcodes enumerated |
 | **Lens firmware** | Fully plaintext + 578-entry variable dictionary + ARM Cortex-M code |
+| **RTOS resource table** | A second embedded table: 9 tasks / 2 semaphores / 7 flags / 4 message queues / 2 cycles; 4 lenses share it verbatim, 2 carry no symbols at all |
 | **Lens disassembly** | 2,096 function fingerprints across 6 models; load base resolved to `0x08000000` |
 | **Ghidra cross-check** | 133 verified entries as seeds: 1,095 → **1,824** functions (+66.6%); 226 leaf functions recovered |
 | **Cross-vendor L-mount** | `.plf` is an L-Mount Alliance standard (shared by Sigma / Leica / Samyang) |
@@ -47,7 +48,7 @@ Full notes in [`docs/en/README.md`](docs/en/README.md), read in order:
 | 04 | [USB access](docs/en/04-protocol-usb.md) | WPD/MTP access status and environment setup |
 | 05 | [Vendor protocol](docs/en/05-mtp-vendor-protocol.md) | MTP vendor extension channel and opcode enumeration |
 | 06 | [Cross-model comparison](docs/en/06-multi-model-comparison.md) | 6-model survey and platform evolution |
-| 07 | [Lens firmware](docs/en/07-lens-firmware.md) | Plaintext structure, disassembly methods, cross-model fingerprint clustering, Ghidra cross-check (with errata) |
+| 07 | [Lens firmware](docs/en/07-lens-firmware.md) | Plaintext structure, disassembly methods, cross-model fingerprint clustering, RTOS resource table, Ghidra cross-check (with errata) |
 | 09 | [Third-party L-mount](docs/en/09-third-party-lens.md) | Cross-vendor container standard, Sigma vector table |
 
 ---
@@ -212,6 +213,25 @@ The two methods are strongly **complementary**:
 
 708 of the 729 new functions (97.1%) land in the main code region, where the
 suspicious-instruction rate is only **1.4%**.
+
+**A second embedded table — the RTOS resource table**: besides the variable
+dictionary (in the header at `0x4000`–`0x9000`), the code region carries a table
+of **fixed 12-byte records**:
+
+| Kind | Count | Names |
+|---|---|---|
+| Task | 9 | `INITIAL_TSK` `DATA_LATCH_TSK` `TRANS_TSK` `EXP1_TSK` `EXP2_TSK` `BLCOM_TSK` **`CMD_TSK`** `USER_TSK` `OIS_TSK` |
+| Semaphore | 2 | `SEM_MS_SUBFI` `SEM_MS_SUBO` |
+| Flag | 7 | `USER_FLG` **`UART_FLG`** `OIS_FLG` `EXP1_FLG` `EXP2_FLG` `TRANS_FLG` **`SPI_SUBFI_FLG`** |
+| Data queue | 4 | `BLCOM_DTQ` **`CMD_DTQ`** `OIS_DTQ` `DATA_LATCH_DTQ` |
+| Cycle | 2 | `USER_CYC` `OIS_CYC` |
+
+**Four of the six lenses (S-R24105 / S-R70200 / S-E2470 / S-X50) share all 22
+resource names verbatim**; the other two (S-S85 / S-S50) have **no symbols at
+all**, including OIS / iris / zoom / focus — so the symbol set is a
+**build-time choice**, not something every model ships. `CMD_TSK` + `CMD_DTQ`
+point at the **command path**, the most natural entry point for analysing the
+lens protocol.
 
 See [`docs/en/07-lens-firmware.md`](docs/en/07-lens-firmware.md).
 

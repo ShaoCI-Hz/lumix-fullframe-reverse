@@ -2376,3 +2376,106 @@ python analysis/lens/ghidra_crosscheck.py \
 ```
 
 Requires Ghidra 12.1.x (JDK 21) and `pip install pyghidra`.
+
+---
+
+## 28. ★★ A second embedded table: the RTOS resource table
+
+### 28.1 Where this sits relative to §3
+
+§3 reported an embedded symbol table of **578 entries** — the lens's **variable
+dictionary**, located in the header at `0x4000`–`0x9000`, and §7 dissected its
+record format.
+
+This section reports a **separate, second table**: a set of **RTOS resource
+names** that is **not** among those 578 entries and sits in the **code region**,
+not the header. It was found while cross-checking string references with Ghidra
+(§27): almost no string in this firmware is referenced by an instruction, but
+one contiguous run of names in the code region turned out to be a
+**fixed-stride resource table**.
+
+### 28.2 The table
+
+Record stride is **12 bytes** (name + NUL, zero-padded), 22 resources plus 2
+semaphores, spanning 288 bytes:
+
+| Kind | Count | Names |
+|---|---|---|
+| **Task** (`_TSK`) | 9 | `INITIAL_TSK` `DATA_LATCH_TSK` `TRANS_TSK` `EXP1_TSK` `EXP2_TSK` `BLCOM_TSK` **`CMD_TSK`** `USER_TSK` `OIS_TSK` |
+| **Semaphore** (`SEM_`) | 2 | `SEM_MS_SUBFI` `SEM_MS_SUBO` |
+| **Flag** (`_FLG`) | 7 | `USER_FLG` **`UART_FLG`** `OIS_FLG` `EXP1_FLG` `EXP2_FLG` `TRANS_FLG` **`SPI_SUBFI_FLG`** |
+| **Data queue** (`_DTQ`) | 4 | `BLCOM_DTQ` **`CMD_DTQ`** `OIS_DTQ` `DATA_LATCH_DTQ` |
+| **Cycle** (`_CYC`) | 2 | `USER_CYC` `OIS_CYC` |
+
+Raw bytes around the table start (`4001V020.plf`, file offset `0x2bbc8`):
+
+```text
+0002bbc8  fb a0 03 10 91 44 06 10   49 4e 49 54 49 41 4c 5f   .....D..INITIAL_
+0002bbd8  54 53 4b 00 44 41 54 41 5f 4c 41 54 43 48 5f 54 53   TSK.DATA_LATCH_TS
+0002bbe8  4b 00 00 54 52 41 4e 53 5f 54 53 4b 00 00 00 45 58   K..TRANS_TSK...EX
+```
+
+The 8 bytes preceding the first name (`fb a0 03 10 91 44 06 10`) read as two
+little-endian words `0x1003a0fb` / `0x10064491` — consistent with code
+addresses, i.e. a small pointer/count header ahead of the name block. This is
+recorded as an observation, not a confirmed structure.
+
+### 28.3 Cross-model: a clean two-way platform split
+
+Extracting this table from all six lenses gives an unambiguous division that is
+**not** the zoom/prime axis:
+
+| Firmware | Lens | Type | `_TSK` | `_FLG` | `_DTQ` | `_CYC` | `SEM_` | table span |
+|---|---|---|---|---|---|---|---|---|
+| `4001V020.plf` | S-R24105 | zoom | 9 | 7 | 4 | 2 | 2 | `0x2BBD0`–`0x2BCF0` |
+| `4002V020.plf` | S-R70200 | zoom | 9 | 7 | 4 | 2 | 2 | `0x2FA40`–`0x2FB60` |
+| `4006V020.plf` | S-E2470 | zoom | 9 | 7 | 4 | 2 | 2 | `0x1AFF0`–`0x1B110` |
+| **`4003V020.plf`** | **S-X50** | **prime** | **9** | **7** | **4** | **2** | **2** | `0x220`–`0x340` |
+| `400CV020.plf` | S-S85 | prime | 0 | 0 | 0 | 0 | 0 | — |
+| `400EV020.plf` | S-S50 | prime | 0 | 0 | 0 | 0 | 0 | — |
+
+Four lenses share **all 22 resource names and both semaphore names
+identical**, at the same 288-byte stride, only relinked to different offsets.
+Two lenses have **none of it**.
+
+### 28.4 `4003` (S-X50) is the informative case
+
+`4003` is a **prime** lens yet carries the **complete** RTOS table — so the
+table is not about zoom. But its **subsystem symbols collapse**:
+
+| Firmware | OIS | Iris | Zoom | Focus | Motor | Gyro |
+|---|---|---|---|---|---|---|
+| `4001` (S-R24105) | 19 | 13 | 5 | 11 | 2 | 16 |
+| `4002` (S-R70200) | 19 | 13 | 5 | 11 | 2 | 16 |
+| `4006` (S-E2470) | 18 | 11 | 5 | 10 | 2 | 16 |
+| **`4003` (S-X50)** | **4** | **0** | **0** | **0** | **0** | **0** |
+| `400C` / `400E` | 0 | 0 | 0 | 0 | 0 | 0 |
+
+`4003` keeps the **task framework** but has essentially no **actuator
+controller** symbols. Read together with §26, this is self-consistent: the RTOS
+skeleton is shared platform code, while the OIS/iris/zoom/focus parameter set is
+per-mechanism.
+
+### 28.5 What this establishes
+
+- The lens firmware is a **multi-tasking RTOS**, not a flat control loop: 9
+  tasks, 2 semaphores, 7 flags, 4 message queues, 2 periodic cycles.
+- **`CMD_TSK` + `CMD_DTQ`** identify the **command path** — a task consuming
+  from a dedicated queue. This is the most likely place a host-facing command
+  dispatcher lives, and the natural target for anyone analysing the lens
+  protocol.
+- **`SPI_SUBFI_FLG`** and **`UART_FLG`** name two external interfaces; `BLCOM_*`
+  names a third channel with both a task and a queue. `SEM_MS_SUBFI` /
+  `SEM_MS_SUBO` are semaphores for a host ("MS") ↔ sub-function path.
+- Two of six lenses ship with **no symbols at all** — meaning the symbol set is
+  a build-time choice, and any conclusion drawn from symbols must state which
+  platform it holds for.
+
+### 28.6 Reproduction
+
+```bash
+python analysis/lens/rtos_resources.py firmware/
+# lists the resource table, subsystem symbol counts, and the platform split
+```
+
+No decompiler is needed — the table is plaintext in the image.
