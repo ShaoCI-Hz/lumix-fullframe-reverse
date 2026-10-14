@@ -26,3 +26,6 @@ desktop.ini
 
 # === Reasonix / 本地工具 ===
 .reasonix/
+
+# 本地交接文档(含本机路径,不入公开仓库)
+HANDOFF.md
